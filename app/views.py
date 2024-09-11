@@ -39,13 +39,17 @@ def order(request, order_id):
         return render(request, 'order.html')
 
     orders_with_names, total_person_price, total = order_service.calculate_order_details(curr_order)
-
     qr_image = qr_generate.get_qr(curr_order, orders_with_names, total_person_price, total)
+
+    total_dish_count = sum(
+        count for person_dishes in curr_order['orders'].values() for count in person_dishes.values()
+    )
 
     return render(request, 'order.html', {
         "order": curr_order,
         "orders_with_names": orders_with_names,
         "total_person_price": total_person_price,
         "total": total,
-        "qr": qr_image
+        "qr": qr_image,
+        "count_dishes": total_dish_count
     })

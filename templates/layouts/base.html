@@ -27,7 +27,9 @@
 
         <div class="position-relative">
             <a href="{% url "order" 1 %}"><img src="{% static "img/svg/shopping-basket.svg" %}" width="40px"></a>
-            <span class="badge basket-badge position-absolute top-100 start-100 translate-middle">9</span>
+            <span class="badge basket-badge position-absolute top-100 start-100 translate-middle">
+                {{ count_dishes|default:0 }}
+            </span>
         </div>
     </div>
   </nav>
