@@ -1,0 +1,64 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block content %}
+
+<div class="container-fluid mb-5">
+    <div class="row mt-5">
+        <div class="col-4"></div>
+        <div class="col-4">
+            <div class="fs-3 text-center red-text-color">
+                Meat'n'Fish
+            </div>
+            <div class="text-light" style="text-align: justify">
+                Под хороший хип-хоп здесь готовят неповторимые рёбрышки
+                и множество других авторских сочных блюд. Внушительные порции,
+                уникальная технология приготовления рёбер (больше суток),
+                душевный персонал и по-настоящему неповторимая атмосфера
+                продолжают завоёвывать сердца и даже города.
+            </div>
+        </div>
+        <div class="col-4"></div>
+    </div>
+</div>
+
+<hr style="width:60%; color: red; margin: 0 20% 0 20%">
+<div class="width: 70% mt-3 mb-3" style="margin: 0 15% 0 15%">
+    <div class="row d-flex justify-content-between">
+        <div class="col-1 text-center fs-4 "><a href="#ribs" class="red-text-color georgia" style="text-decoration: none">Рёбра</a></div>
+        <div class="col-1 text-center fs-4 "><a href="#steak" class="red-text-color georgia" style="text-decoration: none">Стейки</a></div>
+        <div class="col-1 text-center fs-4 "><a href="#fish" class="red-text-color georgia" style="text-decoration: none">Рыба</a></div>
+        <div class="col-1 text-center fs-4 "><a href="#soup" class="red-text-color georgia" style="text-decoration: none">Супы</a></div>
+        <div class="col-1 text-center fs-4 "><a href="#salad" class="red-text-color georgia" style="text-decoration: none">Салаты</a></div>
+        <div class="col-1 text-center fs-4 "><a href="#pizza" class="red-text-color georgia" style="text-decoration: none">Пицца</a></div>
+        <div class="col-1 text-center fs-4 "><a href="#appetizers" class="red-text-color georgia" style="text-decoration: none">Закуски</a></div>
+        <div class="col-1 text-center fs-4 "><a href="#snacks" class="red-text-color georgia" style="text-decoration: none">Снэки</a></div>
+        <div class="col-1 text-center fs-4 "><a href="#sauce" class="red-text-color georgia" style="text-decoration: none">Соусы</a></div>
+        <div class="col-1 text-center fs-4 "><a href="#drinks" class="red-text-color georgia" style="text-decoration: none">Напитки</a></div>
+    </div>
+</div>
+<hr style="width:60%; color: red; margin: 0 20% 50px 20%">
+
+{% for category, dishes in categories.items %}
+    <h2 id="{{ category }}" class="text-center red-text-color georgia mt-5 mb-3">{{ category|capfirst }}</h2>
+    <div class="row">
+        <div class="col-3"></div>
+
+        {% for dish in dishes %}
+            {% include "layouts/card.html" with food=dish %}
+
+            {% if forloop.counter|divisibleby:3 %}
+                <div class="col-3"></div>
+            </div>
+            <div class="row">
+                <div class="col-3"></div>
+            {% endif %}
+        {% endfor %}
+
+        {% if dishes|length|divisibleby:3 == False %}
+            <div class="col-3"></div>
+        </div>
+        {% endif %}
+    </div>
+{% endfor %}
+{% endblock %}

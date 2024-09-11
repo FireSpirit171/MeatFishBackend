@@ -1,0 +1,18 @@
+<div class="card mb-3 col-8">
+    <div class="row g-0">
+    <div class="col-md-4">
+        <a href="{% url 'dish' food.id %}">
+            <img class="dish-photo dish-scale img-fluid rounded-start" src="http://127.0.0.1:9000/meatfish/{{ food.id }}.jpg">
+        </a>
+    </div>
+    <div class="col-md-8">
+        <div class="card-body">
+            <a href="{% url 'dish' food.id %}" style="text-decoration: none;">
+                <h3 class="card-title text-light georgia">{{ food.name }}</h3>
+            </a>
+            <span><p class="text-start red-text-color fs-5">{{ food.price }}р./{{ food.weight }}г.</p></span>
+            <p class="card-text text-light">{{ food.description }}</p>
+        </div>
+    </div>
+    </div>
+</div>
