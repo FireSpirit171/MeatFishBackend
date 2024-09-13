@@ -1,10 +1,10 @@
-from test_data import SERVICES_DATA
+from test_data import FOOD_DATA
 
 def get_services_dict():
-    return {service['id']: service['name'] for service in SERVICES_DATA}
+    return {service['id']: service['name'] for service in FOOD_DATA}
 
 def get_price_dict():
-    return {service['id']: service['price'] for service in SERVICES_DATA}
+    return {service['id']: service['price'] for service in FOOD_DATA}
 
 def calculate_order_details(order):
     services_dict = get_services_dict()

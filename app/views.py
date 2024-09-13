@@ -1,36 +1,44 @@
 from django.shortcuts import render
 from app.services import order_service, qr_generate
-from test_data import SERVICES_DATA, ORDERS_DATA
+from test_data import FOOD_DATA, ORDERS_DATA
 
 def index(request):
-    types = ["ribs", "steak", "fish", "soup", "salad", "pizza", "appetizers", "snacks", "sauce", "drinks"]
-    categories = {name: [] for name in types}
+    # Поиск по названию
+    # query = request.GET.get('dish_name')
+    # if query:
+    #     matching_dishes = [dish for dish in FOOD_DATA if query.lower() in dish['name'].lower()]
+    #     return render(request, 'index.html', {
+    #         'query': query,
+    #         'dishes': matching_dishes
+    #     })
+    
+    min_value = request.GET.get('min_value')
+    max_value = request.GET.get('max_value')
+    if min_value: min_value = int(min_value)
+    if max_value: max_value = int(max_value)
+    
+    if min_value and max_value and min_value > max_value:
+        min_value, max_value = max_value, min_value
 
-    for service in SERVICES_DATA:
-        if service["type"] in categories:
-            categories[service["type"]].append(service)
+    if min_value is not None or max_value is not None:
+        matching_dishes = [dish for dish in FOOD_DATA if min_value <= dish['price'] <= max_value]
+        return render(request, 'index.html', {
+            'min_value': min_value,
+            'max_value': max_value,
+            'dishes': matching_dishes
+        })
 
-    return render(request, 'index.html', {"categories": categories})
+    else:    
+        return render(request, 'index.html', {"dishes": FOOD_DATA})
+
 
 
 def dish(request, dish_id):
-    for service in SERVICES_DATA:
+    for service in FOOD_DATA:
         if service['id'] == dish_id:
             dish = service
             break
     return render(request, 'dish.html', {"food": dish})
-
-def dish_search(request):
-    query = request.GET.get('q')
-    if query:
-        matching_dishes = [dish for dish in SERVICES_DATA if query.lower() in dish['name'].lower()]
-    else:
-        matching_dishes = []
-    
-    return render(request, 'dish_search.html', {
-        'query': query,
-        'dishes': matching_dishes
-    })
 
 
 def order(request, order_id):
