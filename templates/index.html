@@ -3,62 +3,125 @@
 
 {% block content %}
 
-<div class="container-fluid mb-5">
-    <div class="row mt-5">
-        <div class="col-4"></div>
-        <div class="col-4">
-            <div class="fs-3 text-center red-text-color">
-                Meat'n'Fish
-            </div>
-            <div class="text-light" style="text-align: justify">
-                Под хороший хип-хоп здесь готовят неповторимые рёбрышки
-                и множество других авторских сочных блюд. Внушительные порции,
-                уникальная технология приготовления рёбер (больше суток),
-                душевный персонал и по-настоящему неповторимая атмосфера
-                продолжают завоёвывать сердца и даже города.
-            </div>
-        </div>
-        <div class="col-4"></div>
-    </div>
-</div>
+{% comment %} {% if query %}
 
-<hr style="width:60%; color: red; margin: 0 20% 0 20%">
-<div class="width: 70% mt-3 mb-3" style="margin: 0 15% 0 15%">
-    <div class="row d-flex justify-content-between">
-        <div class="col-1 text-center fs-4 "><a href="#ribs" class="red-text-color georgia" style="text-decoration: none">Рёбра</a></div>
-        <div class="col-1 text-center fs-4 "><a href="#steak" class="red-text-color georgia" style="text-decoration: none">Стейки</a></div>
-        <div class="col-1 text-center fs-4 "><a href="#fish" class="red-text-color georgia" style="text-decoration: none">Рыба</a></div>
-        <div class="col-1 text-center fs-4 "><a href="#soup" class="red-text-color georgia" style="text-decoration: none">Супы</a></div>
-        <div class="col-1 text-center fs-4 "><a href="#salad" class="red-text-color georgia" style="text-decoration: none">Салаты</a></div>
-        <div class="col-1 text-center fs-4 "><a href="#pizza" class="red-text-color georgia" style="text-decoration: none">Пицца</a></div>
-        <div class="col-1 text-center fs-4 "><a href="#appetizers" class="red-text-color georgia" style="text-decoration: none">Закуски</a></div>
-        <div class="col-1 text-center fs-4 "><a href="#snacks" class="red-text-color georgia" style="text-decoration: none">Снэки</a></div>
-        <div class="col-1 text-center fs-4 "><a href="#sauce" class="red-text-color georgia" style="text-decoration: none">Соусы</a></div>
-        <div class="col-1 text-center fs-4 "><a href="#drinks" class="red-text-color georgia" style="text-decoration: none">Напитки</a></div>
-    </div>
-</div>
-<hr style="width:60%; color: red; margin: 0 20% 50px 20%">
+    {% if dishes|length == 0 %}
 
-{% for category, dishes in categories.items %}
-    <h2 id="{{ category }}" class="text-center red-text-color georgia mt-5 mb-3">{{ category|capfirst }}</h2>
-    <div class="row">
+    <div class="row mt-5 mb-3">
         <div class="col-3"></div>
-
-        {% for dish in dishes %}
-            {% include "layouts/card.html" with food=dish %}
-
-            {% if forloop.counter|divisibleby:3 %}
-                <div class="col-3"></div>
-            </div>
-            <div class="row">
-                <div class="col-3"></div>
-            {% endif %}
-        {% endfor %}
-
-        {% if dishes|length|divisibleby:3 == False %}
-            <div class="col-3"></div>
+        <div class="col-6">
+            <h2 class="red-text-color georgia">По запросу "{{ query }}" ничего найти не удалось<h2>
         </div>
-        {% endif %}
+        <div class="col-3"></div>
     </div>
-{% endfor %}
+
+    {% else %}
+
+    <div class="row mt-5 mb-3">
+        <div class="col-3"></div>
+        <div class="col-6">
+            <h2 class="red-text-color georgia">Вот что удалось найти по запросу"{{ query }}"<h2>
+        </div>
+        <div class="col-3"></div>
+    </div>
+
+{% endif %} {% endcomment %}
+
+{% if dishes|length == 0 %}
+
+    <div class="row mt-5 mb-3">
+        <div class="col-3"></div>
+        <div class="col-6">
+            <h2 class="red-text-color text-center georgia">Поиск не дал результатов<h2>
+        </div>
+        <div class="col-3"></div>
+    </div>
+
+{% else %}
+
+    <div class="container-fluid mb-3">
+        <div class="row mt-5">
+            <div class="col-4"></div>
+            <div class="col-4">
+                <div class="text-center red-text-color georgia">
+                    <h2>Меню ресторана Meat'n'Fish</h2>
+                </div>
+            </div>
+            <div class="col-4"></div>
+        </div>
+    </div>
+
+{% endif %}
+
+<div class="row">
+    <div class="col-9">
+    {% for dish in dishes %}
+        <div class="row">
+            <div class="col-3"></div>
+            <div class="col-9">
+                {% include "layouts/card.html" with food=dish %}
+            </div>
+        </div>
+    {% endfor %}
+    </div>
+
+    <div class="col-3 ps-4">
+        <div class="mи-0">
+            <div class="row">
+                <h3 class="text-light georgia col-7">Ваша корзина</h3>
+                <div class="position-relative col-5">
+                    <a href="{% url "order" 1 %}"><img src="{% static "img/basket.png" %}" width="40px"></a>
+                    <span class="badge basket-badge position-absolute top-0 start-40 translate-middle">
+                        5
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        {% comment %} Поиск по названию
+        <div>
+            <h3 class="text-light georgia">Поиск по названию</h3>
+            <form class="d-flex" method="GET" action="{% url 'index' %}" role="search">
+                <input class="form-control me-2 price-search" type="search" name="dish_name" placeholder="Выбери своё блюдо..." style="width: 250px" value="{{ query|default:'' }}">
+                <button type="submit" class="btn btn-search" style="height: 30px">
+                    <img src="{% static 'img/svg/search.svg' %}" width="30px">
+                </button>
+            </form>
+        </div> 
+        {% endcomment %}
+        
+        <div class="card-conteiner mt-0">
+            <div class="card-content">
+                <div class="text-light card-title mb-0">Поиск по цене</div>
+                <div class="values">
+                    <div><span id="first">{{ min_value|default:'1' }}</span>р.</div> -
+                    <div><span id="second">{{ max_value|default:'5000' }}</span>р.</div>
+                </div>
+                <div data-range="#third" data-value-1="#second" data-value-0="#first" class="slider-len slider">
+                    <label class="label-min-value">1</label>
+                    <label class="label-max-value" style="margin-left: -15px;">5 000</label>
+                </div>
+                
+                <!-- Форма с ползунками и кнопкой -->
+                <form class="row" method="GET" action="{% url 'index' %}">
+                    <div class="col-11 rangeslider">
+                        <!-- Ползунки, значения которых отправляются с формой -->
+                        <input class="min input-ranges" name="min_value" type="range" min="1" max="5000" value="{{ min_value|default:'1' }}" style="width: 250px;">
+                        <input class="max input-ranges" name="max_value" type="range" min="1" max="5000" value="{{ max_value|default:'5000' }}" style="width: 250px;">
+                    </div>
+        
+                    <div class="col d-flex" style="margin-top: -12px">
+                        <button type="submit" class="btn btn-search" style="height: 30px; margin-left: auto;">
+                            <img src="{% static 'img/svg/search.svg' %}" width="30px">
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>   
+                  
+    </div>
+</div>
+    
+
+
 {% endblock %}

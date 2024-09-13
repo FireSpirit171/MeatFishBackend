@@ -7,7 +7,7 @@
     <div class="col-2"></div>
 
     <div class="col-4">
-        <img class="dish-photo" src="http://127.0.0.1:9000/meatfish/{{ food.id }}.jpg" height="400px">
+        <img class="dish-photo" src="{{ food.photo }}" height="400px">
     </div>
 
     <div class="col-4 grid row-gap-3">
@@ -15,11 +15,6 @@
         <h3 class="text-center red-text-color mb-5">{{ food.price }}р./{{ food.weight }}г.</h3>
         <div class="text-light ps-5 pe-5 mb-5" style="text-align: justify">
             <p class="dish-description">{{ food.description }}</p>
-        </div>
-        <div style="text-align: center">
-            <button type="button" class="btn red-button btn-danger" style="width: 200px">
-                <p style="font-style: italic; margin-bottom: 0px">Добавить в корзину</p>
-            </button>
         </div>
     </div>
 

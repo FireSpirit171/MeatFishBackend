@@ -1,5 +1,23 @@
-<div id="{{ food.id }}" class="col-2">
-    <a href={% url "dish" food.id %}><img class="dish-photo dish-scale" src="http://127.0.0.1:9000/meatfish/{{ food.id }}.jpg" height="200"></a>
-    <div class="dish-name text-light text-center mt-1">{{ food.name }}</div>
-    <span><p class="text-center red-text-color">{{ food.price }}р./{{ food.weight }}г.</p></span>
+<div id="{{ food.id }}" class="card mb-3">
+    <div class="row g-0">
+    <div class="col-md-4">
+        <a href="{% url 'dish' food.id %}">
+            <img class="dish-photo dish-scale img-fluid rounded-start h-100" src="{{ food.photo }}">
+        </a>
+    </div>
+    <div class="col-md-8">
+        <div class="card-body">
+            <a href="{% url 'dish' food.id %}" style="text-decoration: none;">
+                <h3 class="card-title text-light georgia mb-0">{{ food.name }}</h3>
+            </a>
+            <span><p class="text-start red-text-color fs-5">{{ food.price }}р./{{ food.weight }}г.</p></span>
+            <p class="card-text text-light fs-6" style="text-align: justify">{{ food.description }}</p>
+        </div>
+        <div>
+            <button type="button" class="btn red-button btn-danger" style="width: 180px">
+                <p style="font-style: italic; margin-bottom: 0px">Добавить в корзину</p>
+            </button>
+        </div>
+    </div>
+    </div>
 </div>
