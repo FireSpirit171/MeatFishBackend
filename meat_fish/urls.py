@@ -23,5 +23,4 @@ urlpatterns = [
     path('', views.index, name="index"),
     path('dishes/<int:dish_id>', views.dish, name="dish"),
     path('orders/<int:order_id>', views.order, name="order"),
-    path('search/', views.dish_search, name="dish_search")
 ]
