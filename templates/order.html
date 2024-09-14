@@ -22,63 +22,81 @@
     <div class="col-3"></div>
 </div>
 
-{% for person, dishes in orders_with_names.items%}
+{% for person, dishes in orders_with_names.items %}
 <div class="row">
     <div class="col-3"></div>
     <div class="col-6">
-        <h3 class="person-name georgia">{{ person }}</h3>
         {% for dish in dishes %}
-            {% with dish_name=dish.0 dish_price=dish.1 dish_count=dish.2 %}
-                <div class="row">
-                    <div class="col-2"></div>
-                    <div class="col-6 text-start"><h4 class="text-light georgia">{{ dish_name }}</h4></div>
-                    <div class="col-2 text-end text-light"><h4 class="text-light georgia">{{ dish_price }}p.</h4></div>
-                    <div class="col-2 text-light">
-                        <div class="quantity-control">
-                            <div class="dish-count georgia">{{ dish_count }}</div>
-                            <div class="red-controls">
-                                <span class="control-btn">-</span>
-                                <span class="divider"></span>
-                                <span class="control-btn">+</span>
+        <div class="row">
+            <div class="col-9">
+                {% with dish_id=dish.0 dish_name=dish.1 dish_price=dish.2 dish_count=dish.3 dish_photo=dish.4 %}
+                    <div id="{{ dish_id }}" class="card mb-3 dish-card" style="height: 102px">
+                        <div class="row g-0" style="height: 102px">
+                            <div class="col-md-4">
+                                <a href="{% url 'dish' dish_id %}">
+                                    <img src="{{ dish_photo }}" width="150px" class="img-fluid rounded-start h-100">
+                                </a>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="card-body">
+                                    <a href="{% url 'dish' dish_id %}" style="text-decoration: none">
+                                        <h3 class="card-title georgia">{{ dish_name }}</h3>
+                                    </a>
+                                    <div class="bottom-row">
+                                        <div class="dish-price georgia">{{ dish_price }}p.</div>
+                                        <div class="quantity-control">
+                                            <div class="dish-count georgia">{{ dish_count }}</div>
+                                            <div class="red-controls">
+                                                <span class="control-btn">-</span>
+                                                <span class="divider"></span>
+                                                <span class="control-btn">+</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="row">
-                    <div class="col-2"></div>
-                    <div class="col"><hr class="order-underline"></div>
-                </div>
-            {% endwith %}
-        {% endfor %}
-        <div class="row mt-3">
-            <div class="col-2"></div>
-            <div class="col-1">
-                <h3 class="text-light text-start georgia mb-0">
-                    Сумма
-                </h3>
+                {% endwith %}
             </div>
-            <div class="col text-end text-light">
+            <div class="col" style="padding-top: 38px">
+                <h3 class="person-name">{{ person }}</h3>
+            </div>
+        </div>
+        {% endfor %}
+        <div class="row mt-1">
+            <div class="col-1">
+                <h3 class="text-light text-start georgia mb-0">Сумма</h3>
+            </div>
+            <div class="col-8 text-end text-light">
                 <h3 class="georgia">{{ total_person_price|index:forloop.counter0 }}р.</h3>
             </div>
         </div>
-        <div class="row mt-0 mb-2">
-            <div class="col-2"></div>
-            <div class="col"><hr class="order-underline"></div>
+        <div class="row mt-0 mb-5">
+            <div class="col-9"><hr class="order-underline"></div>
         </div>
     </div>
     <div class="col-3"></div>
-</div>        
+</div>
 {% endfor %}
 
-<div class="row mt-5">
+
+<div class="row">
     <div class="col-3"></div>   
-    <div class="col">
-        <h3 class="text-light georgia">Общая стоимость.....{{ total }}р.</h3>
+    <div class="col-3">
+        <h3 class="text-light georgia">Общая стоимость</h3>
     </div>
+    <div class="col" style="padding-left: 90px">
+        <h3 class="text-light georgia">{{ total }}р.</h3>
+    </div>
+</div>
+<div class="row mt-0 mb-5">
+    <div class="col-3"></div>   
+    <div class="col-5" style="width: 580px"><hr class="order-underline"></div>
 </div>
 
 <div class="qr-container">
-    <img src="data:image/png;base64,{{ qr }}" alt="QR Code" width="300" height="300">
+    <img src="{{ order.qr }}" alt="QR Code" width="300" height="300">
 </div>
 
 {% endblock %}
