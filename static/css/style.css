@@ -18,7 +18,7 @@ body {
 }
 
 .main-content {
-    min-height: calc(100vh - 80px);
+    min-height: calc(72vh - 80px);
 }
 
 .footer {
@@ -334,3 +334,70 @@ body {
     float: right;
     margin-right: -5px;
   }
+
+  /* Стили для карточек блюд */
+.dish-card {
+  height: 300px; /* Фиксированная высота карточки */
+  border: 2px solid #B01117; /* Граница карточки */
+  border-radius: 10px; /* Закругленные углы */
+  background-color: #1a1a1a; /* Темный фон для карточки */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* Элементы распределяются по вертикали */
+  margin-bottom: 20px;
+}
+
+.dish-card img {
+  max-height: 100px; /* Максимальная высота изображения */
+  object-fit: cover; /* Обрезка изображения по размеру */
+  border-bottom: 1px solid #B01117; /* Граница под изображением */
+}
+
+.dish-card .card-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  padding-top: 0px;
+}
+
+.dish-card .card-title {
+  font-size: 20px;
+  color: white;
+  margin: 10px 0;
+}
+
+.dish-card .bottom-row {
+  margin-left: 0px !important;
+  display: flex;
+  justify-content: space-between; /* Цена слева, кнопки справа */
+  align-items: flex-end; /* Выравнивание по низу */
+}
+
+.dish-card .dish-price {
+  font-size: 24px;
+  color: white;
+}
+
+.dish-card .quantity-control {
+  margin-right: 10px;
+}
+
+.dish-card .person-name {
+  font-size: 20px;
+  color: #B01117;
+  text-align: center;
+  position: relative;
+  top: 50%;
+  transform: translateY(-50%); /* Расположение имени по середине высоты */
+  font-family: 'Georgia', serif;
+}
+
+.person-name {
+  color: #B01117;
+  text-decoration: underline;
+  font-size: 20px;
+  text-align: center;
+}
+
+

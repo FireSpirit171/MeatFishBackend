@@ -3,30 +3,6 @@
 
 {% block content %}
 
-{% comment %} {% if query %}
-
-    {% if dishes|length == 0 %}
-
-    <div class="row mt-5 mb-3">
-        <div class="col-3"></div>
-        <div class="col-6">
-            <h2 class="red-text-color georgia">По запросу "{{ query }}" ничего найти не удалось<h2>
-        </div>
-        <div class="col-3"></div>
-    </div>
-
-    {% else %}
-
-    <div class="row mt-5 mb-3">
-        <div class="col-3"></div>
-        <div class="col-6">
-            <h2 class="red-text-color georgia">Вот что удалось найти по запросу"{{ query }}"<h2>
-        </div>
-        <div class="col-3"></div>
-    </div>
-
-{% endif %} {% endcomment %}
-
 {% if dishes|length == 0 %}
 
     <div class="row mt-5 mb-3">
@@ -70,25 +46,13 @@
             <div class="row">
                 <h3 class="text-light georgia col-7">Ваша корзина</h3>
                 <div class="position-relative col-5">
-                    <a href="{% url "order" 1 %}"><img src="{% static "img/basket.png" %}" width="40px"></a>
+                    <a href="{% url "order" order.id %}"><img src="{% static "img/basket.png" %}" width="40px"></a>
                     <span class="badge basket-badge position-absolute top-0 start-40 translate-middle">
-                        5
+                        {{ order.count }}
                     </span>
                 </div>
             </div>
         </div>
-        
-        {% comment %} Поиск по названию
-        <div>
-            <h3 class="text-light georgia">Поиск по названию</h3>
-            <form class="d-flex" method="GET" action="{% url 'index' %}" role="search">
-                <input class="form-control me-2 price-search" type="search" name="dish_name" placeholder="Выбери своё блюдо..." style="width: 250px" value="{{ query|default:'' }}">
-                <button type="submit" class="btn btn-search" style="height: 30px">
-                    <img src="{% static 'img/svg/search.svg' %}" width="30px">
-                </button>
-            </form>
-        </div> 
-        {% endcomment %}
         
         <div class="card-conteiner mt-0">
             <div class="card-content">
@@ -102,10 +66,8 @@
                     <label class="label-max-value" style="margin-left: -15px;">5 000</label>
                 </div>
                 
-                <!-- Форма с ползунками и кнопкой -->
                 <form class="row" method="GET" action="{% url 'index' %}">
                     <div class="col-11 rangeslider">
-                        <!-- Ползунки, значения которых отправляются с формой -->
                         <input class="min input-ranges" name="min_value" type="range" min="1" max="5000" value="{{ min_value|default:'1' }}" style="width: 250px;">
                         <input class="max input-ranges" name="max_value" type="range" min="1" max="5000" value="{{ max_value|default:'5000' }}" style="width: 250px;">
                     </div>
