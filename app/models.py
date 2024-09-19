@@ -5,8 +5,7 @@ from io import BytesIO
 
 class DishManager(models.Manager):
     def get_one_dish(self, dish_id):
-        dishes = Dish.objects.filter(id=dish_id)
-        return dishes.get(id=dish_id)
+        return self.get(id=dish_id)
 
 class Dish(models.Model):
     STATUS_CHOICES = [
@@ -14,6 +13,7 @@ class Dish(models.Model):
         ("d", "Deleted")
     ]
     name = models.CharField(max_length=100)
+    type = models.CharField(max_length=25, null=True)
     description = models.TextField()
     price = models.IntegerField()
     weight = models.IntegerField()
@@ -24,7 +24,7 @@ class Dish(models.Model):
 
     def __str__(self):
         return self.name
-    
+
 class OrderManager(models.Manager):
     def generate_qr_code(self, order):
         qr_data = f"Order ID: {order.id}, Table Number: {order.table_number}"
@@ -37,8 +37,10 @@ class OrderManager(models.Manager):
         return buffer
 
     def get_one_order(self, order_id):
-        orders = Order.objects.filter(id=order_id)
-        return orders.get(id=order_id)
+        return self.get(id=order_id)
+
+    def get_total_dish_count(self, order):
+        return order.orderdish_set.aggregate(count=models.Sum('count'))['count'] or 0
 
 class Order(models.Model):
     STATUS_CHOICES = [
@@ -64,8 +66,8 @@ class Order(models.Model):
     objects = OrderManager()
 
     def __str__(self):
-        return self.id
-    
+        return str(self.id)
+
 class OrderDish(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
     dish = models.ForeignKey(Dish, on_delete=models.CASCADE)    
@@ -73,13 +75,6 @@ class OrderDish(models.Model):
     count = models.IntegerField()
 
     class Meta:
-        unique_together = ('order', 'dish', 'user')
-    
-
-
-
-
-
-
-
-
+        constraints = [
+            models.UniqueConstraint(fields=['order', 'dish', 'user'], name='unique_order_dish_user')
+        ]
