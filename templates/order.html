@@ -12,11 +12,11 @@
     <div class="col-3"></div>
     <div class="col-6">
         <div>   
-            <h3 class="text-light georgia">Номер стола.................{{ order.table }}</h3>
+            <h3 class="text-light georgia">Номер стола.................{{ table_number }}</h3>
         </div>
 
         <div>   
-            <h3 class="text-light georgia">Количество персон.....{{ order.orders | length }}</h3>
+            <h3 class="text-light georgia">Количество персон.....{{ number_of_guests }}</h3>
         </div>
     </div>
     <div class="col-3"></div>
@@ -60,7 +60,7 @@
                 {% endwith %}
             </div>
             <div class="col" style="padding-top: 38px">
-                <h3 class="person-name">{{ person }}</h3>
+                <h2 class="person-name georgia" style="text-decoration: none">Гость №{{ person }}</h2>
             </div>
         </div>
         {% endfor %}
@@ -86,13 +86,13 @@
     <div class="col-3">
         <h3 class="text-light georgia">Общая стоимость</h3>
     </div>
-    <div class="col" style="padding-left: 90px">
+    <div class="col" style="padding-left: 170px">
         <h3 class="text-light georgia">{{ total }}р.</h3>
     </div>
 </div>
 <div class="row mt-0 mb-5">
     <div class="col-3"></div>   
-    <div class="col-5" style="width: 580px"><hr class="order-underline"></div>
+    <div class="col-5" style="width: 800px"><hr class="order-underline"></div>
 </div>
 
 <div class="qr-container">
