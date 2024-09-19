@@ -1,32 +1,28 @@
-from test_data import FOOD_DATA
-
-def get_services_dict():
-    return {service['id']: service['name'] for service in FOOD_DATA}
-
-def get_price_dict():
-    return {service['id']: service['price'] for service in FOOD_DATA}
-
-def get_photos_dict():
-    return {service['id']: service['photo'] for service in FOOD_DATA}
+from app.models import OrderDish
 
 def calculate_order_details(order):
-    services_dict = get_services_dict()
-    price_dict = get_price_dict()
-    photos_dict = get_photos_dict()
+    # Получаем связанные записи OrderDish для текущего заказа
+    order_dishes = OrderDish.objects.filter(order=order).select_related('dish', 'user').order_by('user__id')
 
-    total = 0
     orders_with_names = {}
     total_person_price = []
+    total = 0
 
-    for person, dishes in order["orders"].items():
-        orders_with_names[person] = [
-            (dish_id, services_dict[dish_id], price_dict[dish_id] * count, count, photos_dict[dish_id])
-            for dish_id, count in dishes.items()
-        ]
+    # Для каждого пользователя в заказе считаем его блюда и стоимость
+    for order_dish in order_dishes:
+        user_id = order_dish.user.id
+        dish = order_dish.dish
+        dish_price = dish.price * order_dish.count
 
-        total_price = sum([price_dict[dish_id] * count for dish_id, count in dishes.items()])
+        if user_id not in orders_with_names:
+            orders_with_names[user_id] = []
+
+        orders_with_names[user_id].append(
+            (dish.id, dish.name, dish_price, order_dish.count, dish.photo)
+        )
+
+        total_price = dish_price
         total_person_price.append(total_price)
         total += total_price
 
     return orders_with_names, total_person_price, total
-
