@@ -30,11 +30,11 @@
         <div class="row">
             <div class="col-9">
                 {% with dish_id=dish.0 dish_name=dish.1 dish_price=dish.2 dish_count=dish.3 dish_photo=dish.4 %}
-                    <div id="{{ dish_id }}" class="card mb-3 dish-card" style="height: 102px">
-                        <div class="row g-0" style="height: 102px">
+                    <div id="{{ dish_id }}" class="card mb-3 dish-card" style="height: 120px">
+                        <div class="row g-0">
                             <div class="col-md-4">
                                 <a href="{% url 'dish' dish_id %}">
-                                    <img src="{{ dish_photo }}" width="150px" class="img-fluid rounded-start h-100">
+                                    <img src="{{ dish_photo }}" width="150px" height="118px" class="rounded-start">
                                 </a>
                             </div>
                             <div class="col-md-8">
@@ -59,7 +59,7 @@
                     </div>
                 {% endwith %}
             </div>
-            <div class="col" style="padding-top: 38px">
+            <div class="col" style="padding-top: 48px">
                 <h2 class="person-name georgia" style="text-decoration: none">Гость №{{ person }}</h2>
             </div>
         </div>

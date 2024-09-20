@@ -14,9 +14,12 @@
             <p class="card-text text-light fs-6 georgia" style="text-align: justify">Category: {{ food.type }}</p>
         </div>
         <div>
-            <button type="button" class="btn red-button btn-danger ms-3" style="width: 180px">
-                <p style="font-style: italic; margin-bottom: 0px">Добавить в корзину</p>
-            </button>
+            <form method="POST" action="{% url 'add_dish_to_order' food.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn red-button btn-danger ms-3" style="width: 180px">
+                    <p style="font-style: italic; margin-bottom: 0px">Добавить в корзину</p>
+                </button>
+            </form>
         </div>
     </div>
     </div>

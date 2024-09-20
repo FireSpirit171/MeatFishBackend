@@ -42,15 +42,28 @@
     </div>
 
     <div class="col-3 ps-4">
-        <div class="mи-0">
+        <div>
             <div class="row">
                 <h3 class="text-light georgia col-7">Ваша корзина</h3>
-                <div class="position-relative col-5">
-                    <a href="{% url "order" order.id %}"><img src="{% static "img/basket.png" %}" width="40px"></a>
-                    <span class="badge basket-badge position-absolute top-0 start-40 translate-middle">
-                        {{ order.count }}
-                    </span>
-                </div>
+                {% if order %}
+                    <div class="position-relative col-5">
+                        <a href="{% url 'order' order.id %}">
+                            <img src="{% static "img/basket.png" %}" width="40px">
+                        </a>
+                        <span class="badge basket-badge position-absolute top-0 start-40 translate-middle">
+                            {{ order.count }}
+                        </span>
+                    </div>
+                {% else %}
+                    <div class="position-relative col-5">
+                        <a class="disabled" href="#">
+                            <img src="{% static "img/basket.png" %}" width="40px">
+                        </a>
+                        <span class="badge basket-badge position-absolute top-0 start-40 translate-middle">
+                            0
+                        </span>
+                    </div>
+                {% endif %}
             </div>
         </div>
         
