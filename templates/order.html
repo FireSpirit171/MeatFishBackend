@@ -4,99 +4,120 @@
 
 {% block content %}
 
-<div class="mt-5 mb-2">   
-    <h1 class="text-center red-text-color georgia">Заказ №{{ order.id }}</h1>
-</div>
-
-<div class="row mt-2 mb-4">
-    <div class="col-3"></div>
-    <div class="col-6">
-        <div>   
-            <h3 class="text-light georgia">Номер стола.................{{ table_number }}</h3>
+{% if error_message %}
+    <div class="row">
+        <div class="col-3"></div>
+        <div class="mt-5 col-6">
+            <h2 class="text-center text-light">{{ error_message }}<h2>
         </div>
-
-        <div>   
-            <h3 class="text-light georgia">Количество персон.....{{ number_of_guests }}</h3>
-        </div>
+        <div class="col-3"></div>
     </div>
-    <div class="col-3"></div>
-</div>
+{% else %}
 
-{% for person, dishes in orders_with_names.items %}
-<div class="row">
-    <div class="col-3"></div>
-    <div class="col-6">
-        {% for dish in dishes %}
-        <div class="row">
-            <div class="col-9">
-                {% with dish_id=dish.0 dish_name=dish.1 dish_price=dish.2 dish_count=dish.3 dish_photo=dish.4 %}
-                    <div id="{{ dish_id }}" class="card mb-3 dish-card" style="height: 120px">
-                        <div class="row g-0">
-                            <div class="col-md-4">
-                                <a href="{% url 'dish' dish_id %}">
-                                    <img src="{{ dish_photo }}" width="150px" height="118px" class="rounded-start">
-                                </a>
-                            </div>
-                            <div class="col-md-8">
-                                <div class="card-body">
-                                    <a href="{% url 'dish' dish_id %}" style="text-decoration: none">
-                                        <h3 class="card-title georgia">{{ dish_name }}</h3>
+    <div class="mt-5 mb-2">   
+        <h1 class="text-center red-text-color georgia">Заказ №{{ order.id }}</h1>
+    </div>
+
+    <div class="row mt-2 mb-4">
+        <div class="col-3"></div>
+        <div class="col-6">
+            <div class="mb-2">
+                <form method="POST" action="{% url 'delete_order' order.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn red-button btn-danger" style="width: 180px">
+                        <p style="font-style: italic; margin-bottom: 0px; font-size:20px">Удалить заказ</p>
+                    </button>
+                </form>
+            </div>
+            <div>   
+                <h3 class="text-light georgia">Номер стола.................{{ table_number }}</h3>
+            </div>
+
+            <div>   
+                <h3 class="text-light georgia">Количество персон.....{{ number_of_guests }}</h3>
+            </div>
+        </div>
+        <div class="col-3"></div>
+    </div>
+
+    {% for person, dishes in orders_with_names.items %}
+    <div class="row">
+        <div class="col-3"></div>
+        <div class="col-6">
+            {% for dish in dishes %}
+            <div class="row">
+                <div class="col-9">
+                    {% with dish_id=dish.0 dish_name=dish.1 dish_price=dish.2 dish_count=dish.3 dish_photo=dish.4 %}
+                        <div id="{{ dish_id }}" class="card mb-3 dish-card" style="height: 120px">
+                            <div class="row g-0">
+                                <div class="col-md-4">
+                                    <a href="{% url 'dish' dish_id %}">
+                                        <img src="{{ dish_photo }}" width="150px" height="118px" class="rounded-start">
                                     </a>
-                                    <div class="bottom-row">
-                                        <div class="dish-price georgia">{{ dish_price }}p.</div>
-                                        <div class="quantity-control">
-                                            <div class="dish-count georgia">{{ dish_count }}</div>
-                                            <div class="red-controls">
-                                                <span class="control-btn">-</span>
-                                                <span class="divider"></span>
-                                                <span class="control-btn">+</span>
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="card-body">
+                                        <a href="{% url 'dish' dish_id %}" style="text-decoration: none">
+                                            <h3 class="card-title georgia">{{ dish_name }}</h3>
+                                        </a>
+                                        <div class="bottom-row">
+                                            <div class="dish-price georgia">{{ dish_price }}p.</div>
+                                            <div class="quantity-control">
+                                                <div class="dish-count georgia">{{ dish_count }}</div>
+                                                <div class="red-controls">
+                                                    <span class="control-btn">-</span>
+                                                    <span class="divider"></span>
+                                                    <span class="control-btn">+</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                {% endwith %}
+                    {% endwith %}
+                </div>
+                <div class="col" style="padding-top: 48px">
+                    <h2 class="person-name georgia" style="text-decoration: none">Гость №{{ person }}</h2>
+                </div>
             </div>
-            <div class="col" style="padding-top: 48px">
-                <h2 class="person-name georgia" style="text-decoration: none">Гость №{{ person }}</h2>
+            {% endfor %}
+            <div class="row mt-1">
+                <div class="col-1">
+                    <h3 class="text-light text-start georgia mb-0">Сумма</h3>
+                </div>
+                <div class="col-8 text-end text-light">
+                    <h3 class="georgia">{{ total_person_price|index:forloop.counter0 }}р.</h3>
+                </div>
+            </div>
+            <div class="row mt-0 mb-5">
+                <div class="col-9"><hr class="order-underline"></div>
             </div>
         </div>
-        {% endfor %}
-        <div class="row mt-1">
-            <div class="col-1">
-                <h3 class="text-light text-start georgia mb-0">Сумма</h3>
-            </div>
-            <div class="col-8 text-end text-light">
-                <h3 class="georgia">{{ total_person_price|index:forloop.counter0 }}р.</h3>
-            </div>
+        <div class="col-3"></div>
+    </div>
+    {% endfor %}
+
+
+    <div class="row">
+        <div class="col-3"></div>   
+        <div class="col-3">
+            <h3 class="text-light georgia">Общая стоимость</h3>
         </div>
-        <div class="row mt-0 mb-5">
-            <div class="col-9"><hr class="order-underline"></div>
+        <div class="col-3">
+            <h3 class="text-light georgia" style="padding-left: 80px">{{ total }}р.</h3>
         </div>
+        <div class="col-3"></div> 
     </div>
-    <div class="col-3"></div>
-</div>
-{% endfor %}
-
-
-<div class="row">
-    <div class="col-3"></div>   
-    <div class="col-3">
-        <h3 class="text-light georgia">Общая стоимость</h3>
+    <div class="row mt-0 mb-5">
+        <div class="col-3"></div>   
+        <div class="col-5" style="width: 580px"><hr class="order-underline"></div>
     </div>
-    <div class="col" style="padding-left: 170px">
-        <h3 class="text-light georgia">{{ total }}р.</h3>
-    </div>
-</div>
-<div class="row mt-0 mb-5">
-    <div class="col-3"></div>   
-    <div class="col-5" style="width: 800px"><hr class="order-underline"></div>
-</div>
 
-<div class="qr-container">
-    <img src="{{ order.qr }}" alt="QR Code" width="300" height="300">
-</div>
+    <div class="qr-container">
+        <img src="{{ qr }}" alt="QR Code" width="300" height="300">
+    </div>
+
+{% endif %}
 
 {% endblock %}
