@@ -1,8 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from app.models import Dish, Order, OrderDish
-from app.services import order_service
-from django.db import transaction, connection
-from django.contrib.auth import authenticate
+from app.services import order_service, qr_generate
+from django.db import connection
 
 def add_dish_to_order(request, dish_id):
     dish = get_object_or_404(Dish, id=dish_id)
@@ -13,16 +12,16 @@ def add_dish_to_order(request, dish_id):
     except Order.DoesNotExist:
         order = Order.objects.create(creator=user, table_number=1, status='dr')
 
-    order_service, created = OrderDish.objects.get_or_create(order=order, count=1, dish=dish, user=user)
+    order_dish, created = OrderDish.objects.get_or_create(order=order, count=1, dish=dish, user=user)
     if not created:
-        order_service.quantity += 1
-    order_service.save()
+        order_dish.count += 1
+    order_dish.save()
 
     return redirect('order', order_id=order.id)
 
 def delete_order(request, order_id):
     with connection.cursor() as cursor:
-        cursor.execute("UPDATE yourapp_order SET status = 'deleted' WHERE id = %s", [order_id])
+        cursor.execute("UPDATE app_order SET status = 'del' WHERE id = %s", [order_id])
     
     return redirect('index')
 
@@ -66,11 +65,17 @@ def dish(request, dish_id):
     return render(request, 'dish.html', {"food": dish})
 
 def order(request, order_id):
-    curr_order = get_object_or_404(Order, id=order_id)
-    
+    try:
+        curr_order = Order.objects.get(id=order_id)
+        if curr_order.status == 'del':
+            raise Order.DoesNotExist 
+    except Order.DoesNotExist:
+        return render(request, 'order.html', {"error_message": "Нельзя просмотреть заказ."})
+
     orders_with_names, total_person_price, total = order_service.calculate_order_details(curr_order)
     total_dish_count = Order.objects.get_total_dish_count(curr_order)
     number_of_guests = OrderDish.objects.filter(order=curr_order).values('user').distinct().count()
+    qr_image = qr_generate.get_qr(curr_order, orders_with_names, total_person_price, total)
 
     return render(request, 'order.html', {
         "order": curr_order,
@@ -79,6 +84,8 @@ def order(request, order_id):
         "total_person_price": total_person_price,
         "total": total,
         "count_dishes": total_dish_count,
-        "number_of_guests": number_of_guests
+        "number_of_guests": number_of_guests,
+        "qr": qr_image,
     })
+
 
