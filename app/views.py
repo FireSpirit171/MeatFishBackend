@@ -17,7 +17,7 @@ def add_dish_to_dinner(request, dish_id):
         dinner_dish.count += 1
     dinner_dish.save()
 
-    return redirect('dinner', dinner_id=dinner.id)
+    return redirect('index')
 
 def delete_dinner(request, dinner_id):
     with connection.cursor() as cursor:
