@@ -2,15 +2,15 @@ import segno
 import base64
 from io import BytesIO
 
-def get_qr(order_info, person_orders, person_price, total):
+def get_qr(dinner_info, person_dinners, person_price, total):
     modified_person_price = {}
     i = 0
-    for person in person_orders.keys():
+    for person in person_dinners.keys():
         modified_person_price[person] = person_price[i]
         i += 1
 
-    info = f"Заказ №{order_info.id}\nСтол №{order_info.table_number}\n\n"
-    for person, dishes in person_orders.items():
+    info = f"Заказ №{dinner_info.id}\nСтол №{dinner_info.table_number}\n\n"
+    for person, dishes in person_dinners.items():
         info += f'Гость №{person}:\n'
         for dish in dishes:
             info += f"\t{dish[1]} - {dish[3]}шт. = {dish[2]}р.\n"

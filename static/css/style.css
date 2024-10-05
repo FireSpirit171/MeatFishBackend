@@ -86,7 +86,7 @@ body {
     text-decoration: underline;
 }
 
-.order-underline {
+.dinner-underline {
     margin-top: 0;
     margin-bottom: 5px;
     padding-left: 100px;
@@ -204,7 +204,7 @@ body {
   .card-content .card-title {
     font-family: 'Georgia', serif;
     font-style: italic;
-    font-size: 28px;
+    font-size: 24px;
 
     margin: 0 0 10px 0;
     color: var(--color-headline);
@@ -404,4 +404,21 @@ a.disabled {
   pointer-events: none;
 }
 
+.input-div{
+  display: flex;
+  align-items: center;
+}
+
+.input-guest{
+  max-width: 150px;
+  font-size: 20px;
+  font-family: 'Georgia', serif;
+  font-style: italic;
+  border-radius: 10px;
+  padding-left: 20px;
+}
+
+.input-guest:disabled{
+  color: #fff;
+}
 

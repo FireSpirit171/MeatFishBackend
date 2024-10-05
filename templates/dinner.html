@@ -15,14 +15,14 @@
 {% else %}
 
     <div class="mt-5 mb-2">   
-        <h1 class="text-center red-text-color georgia">Заказ №{{ order.id }}</h1>
+        <h1 class="text-center red-text-color georgia">Заказ №{{ dinner.id }}</h1>
     </div>
 
     <div class="row mt-2 mb-4">
         <div class="col-3"></div>
         <div class="col-6">
             <div class="mb-2">
-                <form method="POST" action="{% url 'delete_order' order.id %}">
+                <form method="POST" action="{% url 'delete_dinner' dinner.id %}">
                     {% csrf_token %}
                     <button type="submit" class="btn red-button btn-danger" style="width: 180px">
                         <p style="font-style: italic; margin-bottom: 0px; font-size:20px">Удалить заказ</p>
@@ -40,7 +40,7 @@
         <div class="col-3"></div>
     </div>
 
-    {% for person, dishes in orders_with_names.items %}
+    {% for person, dishes in dinners_with_names.items %}
     <div class="row">
         <div class="col-3"></div>
         <div class="col-6">
@@ -77,8 +77,8 @@
                         </div>
                     {% endwith %}
                 </div>
-                <div class="col" style="padding-top: 48px">
-                    <h2 class="person-name georgia" style="text-decoration: none">Гость №{{ person }}</h2>
+                <div class="col input-div">
+                    <input name="guest" value="{{ person }}" class="input-guest" disabled>
                 </div>
             </div>
             {% endfor %}
@@ -91,7 +91,7 @@
                 </div>
             </div>
             <div class="row mt-0 mb-5">
-                <div class="col-9"><hr class="order-underline"></div>
+                <div class="col-9"><hr class="dinner-underline"></div>
             </div>
         </div>
         <div class="col-3"></div>
@@ -111,7 +111,7 @@
     </div>
     <div class="row mt-0 mb-5">
         <div class="col-3"></div>   
-        <div class="col-5" style="width: 580px"><hr class="order-underline"></div>
+        <div class="col-5" style="width: 580px"><hr class="dinner-underline"></div>
     </div>
 
     <div class="qr-container">

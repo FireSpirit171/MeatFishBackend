@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
-from app.models import Dish, Order, OrderDish
+from app.models import Dish, Dinner, DinnerDish
 
 URL = 'http://127.0.0.1:9000/meatfish/{}.jpg'
 FOOD_DATA = [
@@ -277,7 +277,7 @@ FOOD_DATA = [
 ]
 
 class Command(BaseCommand):
-    help = 'Fills the database with test data: dishes, users, orders, and order-dish relationships'
+    help = 'Fills the database with test data: dishes, users, dinners, and dinner-dish relationships'
 
     def handle(self, *args, **kwargs):
         for food in FOOD_DATA:
@@ -316,7 +316,7 @@ class Command(BaseCommand):
             else:
                 self.stdout.write(self.style.WARNING(f'User "{user.username}" already exists.'))
 
-        orders_data = [
+        dinners_data = [
             {'table_number': 1, 'creator_id': 1},
             {'table_number': 2, 'creator_id': 2},
             {'table_number': 3, 'creator_id': 3},
@@ -324,42 +324,42 @@ class Command(BaseCommand):
             {'table_number': 5, 'creator_id': 5},
         ]
 
-        for data in orders_data:
-            order, created = Order.objects.get_or_create(
+        for data in dinners_data:
+            dinner, created = Dinner.objects.get_or_create(
                 table_number=data['table_number'],
                 creator_id=data['creator_id'],
                 defaults={'status': 'dr'}
             )
             if created:
-                self.stdout.write(self.style.SUCCESS(f'Order for table {order.table_number} created.'))
+                self.stdout.write(self.style.SUCCESS(f'Dinner for table {dinner.table_number} created.'))
             else:
-                self.stdout.write(self.style.WARNING(f'Order for table {order.table_number} already exists.'))
+                self.stdout.write(self.style.WARNING(f'Dinner for table {dinner.table_number} already exists.'))
 
-        order_dish_data = [
+        dinner_dish_data = [
             # Для первого заказа один человек (первый пользователь)
-            {'order_id': 1, 'dish_id': 1, 'user_id': 1, 'count': 2},
+            {'dinner_id': 1, 'dish_id': 1, 'user': 'user1', 'count': 1},
             # Во втором заказе 1 и 2 пользователь
-            {'order_id': 2, 'dish_id': 2, 'user_id': 1, 'count': 1},
-            {'order_id': 2, 'dish_id': 2, 'user_id': 2, 'count': 1},
+            {'dinner_id': 2, 'dish_id': 2, 'user': 'user1', 'count': 1},
+            {'dinner_id': 2, 'dish_id': 3, 'user': 'user2', 'count': 1},
             # В третьем заказе 1, 2 и 3 пользователь
-            {'order_id': 3, 'dish_id': 1, 'user_id': 1, 'count': 1},
-            {'order_id': 3, 'dish_id': 2, 'user_id': 2, 'count': 2},
-            {'order_id': 3, 'dish_id': 1, 'user_id': 3, 'count': 1},
+            {'dinner_id': 3, 'dish_id': 4, 'user': 'user1', 'count': 1},
+            {'dinner_id': 3, 'dish_id': 5, 'user': 'user2', 'count': 1},
+            {'dinner_id': 3, 'dish_id': 6, 'user': 'user3', 'count': 1},
             # В четвертом заказе только 4 пользователь
-            {'order_id': 4, 'dish_id': 1, 'user_id': 4, 'count': 3},
+            {'dinner_id': 4, 'dish_id': 7, 'user': 'user4', 'count': 1},
             # В пятом заказе 4 и 5 пользователь
-            {'order_id': 5, 'dish_id': 2, 'user_id': 4, 'count': 1},
-            {'order_id': 5, 'dish_id': 2, 'user_id': 5, 'count': 2},
+            {'dinner_id': 5, 'dish_id': 8, 'user': 'user4', 'count': 1},
+            {'dinner_id': 5, 'dish_id': 9, 'user': 'user5', 'count': 1},
         ]
 
-        for od in order_dish_data:
-            order_dish, created = OrderDish.objects.get_or_create(
-                order_id=od['order_id'],
+        for od in dinner_dish_data:
+            dinner_dish, created = DinnerDish.objects.get_or_create(
+                dinner_id=od['dinner_id'],
                 dish_id=od['dish_id'],
-                user_id=od['user_id'],
+                user=od['user'],
                 defaults={'count': od['count']}
             )
             if created:
-                self.stdout.write(self.style.SUCCESS(f'OrderDish entry for order {od["order_id"]}, dish {od["dish_id"]}, user {od["user_id"]} created.'))
+                self.stdout.write(self.style.SUCCESS(f'DinnerDish entry for dinner {od["dinner_id"]}, dish {od["dish_id"]}, user {od["user"]} created.'))
             else:
-                self.stdout.write(self.style.WARNING(f'OrderDish entry for order {od["order_id"]}, dish {od["dish_id"]}, user {od["user_id"]} already exists.'))
+                self.stdout.write(self.style.WARNING(f'DinnerDish entry for dinner {od["dinner_id"]}, dish {od["dish_id"]}, user {od["user"]} already exists.'))

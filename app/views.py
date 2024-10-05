@@ -1,27 +1,27 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from app.models import Dish, Order, OrderDish
-from app.services import order_service, qr_generate
+from app.models import Dish, Dinner, DinnerDish
+from app.services import dinner_service, qr_generate
 from django.db import connection
 
-def add_dish_to_order(request, dish_id):
+def add_dish_to_dinner(request, dish_id):
     dish = get_object_or_404(Dish, id=dish_id)
     user = request.user
 
     try:
-        order = Order.objects.get(creator=user, status='dr')
-    except Order.DoesNotExist:
-        order = Order.objects.create(creator=user, table_number=1, status='dr')
+        dinner = Dinner.objects.get(creator=user, status='dr')
+    except Dinner.DoesNotExist:
+        dinner = Dinner.objects.create(creator=user, table_number=1, status='dr')
 
-    order_dish, created = OrderDish.objects.get_or_create(order=order, count=1, dish=dish, user=user)
+    dinner_dish, created = DinnerDish.objects.get_or_create(dinner=dinner, count=1, dish=dish, user=user.username)
     if not created:
-        order_dish.count += 1
-    order_dish.save()
+        dinner_dish.count += 1
+    dinner_dish.save()
 
-    return redirect('order', order_id=order.id)
+    return redirect('dinner', dinner_id=dinner.id)
 
-def delete_order(request, order_id):
+def delete_dinner(request, dinner_id):
     with connection.cursor() as cursor:
-        cursor.execute("UPDATE app_order SET status = 'del' WHERE id = %s", [order_id])
+        cursor.execute("UPDATE app_dinner SET status = 'del' WHERE id = %s", [dinner_id])
     
     return redirect('index')
 
@@ -38,15 +38,15 @@ def index(request):
         min_value, max_value = max_value, min_value
 
     user = request.user
-    curr_order = Order.objects.filter(creator=user, status='dr').first()
+    curr_dinner = Dinner.objects.filter(creator=user, status='dr').first()
 
-    if curr_order:
-        order_info = {
-            'id': curr_order.id,
-            'count': Order.objects.get_total_dish_count(curr_order)
+    if curr_dinner:
+        dinner_info = {
+            'id': curr_dinner.id,
+            'count': Dinner.objects.get_total_dish_count(curr_dinner)
         }
     else:
-        order_info = None
+        dinner_info = None
 
     if min_value is not None or max_value is not None:
         dishes = Dish.objects.filter(price__gte=min_value, price__lte=max_value)
@@ -54,38 +54,36 @@ def index(request):
             'min_value': min_value,
             'max_value': max_value,
             'dishes': dishes,
-            'order': order_info
+            'dinner': dinner_info
         })
 
     dishes = Dish.objects.all()
-    return render(request, 'index.html', {"dishes": dishes, 'order': order_info})
+    return render(request, 'index.html', {"dishes": dishes, 'dinner': dinner_info})
 
 def dish(request, dish_id):
     dish = get_object_or_404(Dish, id=dish_id)
     return render(request, 'dish.html', {"food": dish})
 
-def order(request, order_id):
+def dinner(request, dinner_id):
     try:
-        curr_order = Order.objects.get(id=order_id)
-        if curr_order.status == 'del':
-            raise Order.DoesNotExist 
-    except Order.DoesNotExist:
-        return render(request, 'order.html', {"error_message": "Нельзя просмотреть заказ."})
+        curr_dinner = Dinner.objects.get(id=dinner_id)
+        if curr_dinner.status == 'del':
+            raise Dinner.DoesNotExist 
+    except Dinner.DoesNotExist:
+        return render(request, 'dinner.html', {"error_message": "Нельзя просмотреть заказ."})
 
-    orders_with_names, total_person_price, total = order_service.calculate_order_details(curr_order)
-    total_dish_count = Order.objects.get_total_dish_count(curr_order)
-    number_of_guests = OrderDish.objects.filter(order=curr_order).values('user').distinct().count()
-    qr_image = qr_generate.get_qr(curr_order, orders_with_names, total_person_price, total)
+    dinners_with_names, total_person_price, total = dinner_service.calculate_dinner_details(curr_dinner)
+    total_dish_count = Dinner.objects.get_total_dish_count(curr_dinner)
+    number_of_guests = DinnerDish.objects.filter(dinner=curr_dinner).values('user').distinct().count()
+    qr_image = qr_generate.get_qr(curr_dinner, dinners_with_names, total_person_price, total)
 
-    return render(request, 'order.html', {
-        "order": curr_order,
-        "table_number": curr_order.table_number,
-        "orders_with_names": orders_with_names,
+    return render(request, 'dinner.html', {
+        "dinner": curr_dinner,
+        "table_number": curr_dinner.table_number,
+        "dinners_with_names": dinners_with_names,
         "total_person_price": total_person_price,
         "total": total,
         "count_dishes": total_dish_count,
         "number_of_guests": number_of_guests,
         "qr": qr_image,
     })
-
-

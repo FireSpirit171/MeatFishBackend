@@ -25,9 +25,9 @@ class Dish(models.Model):
     def __str__(self):
         return self.name
 
-class OrderManager(models.Manager):
-    def generate_qr_code(self, order):
-        qr_data = f"Order ID: {order.id}, Table Number: {order.table_number}"
+class DinnerManager(models.Manager):
+    def generate_qr_code(self, dinner):
+        qr_data = f"Order ID: {dinner.id}, Table Number: {dinner.table_number}"
         qr = segno.make(qr_data)
 
         buffer = BytesIO()
@@ -36,13 +36,13 @@ class OrderManager(models.Manager):
 
         return buffer
 
-    def get_one_order(self, order_id):
-        return self.get(id=order_id)
+    def get_one_dinner(self, dinner_id):
+        return self.get(id=dinner_id)
 
-    def get_total_dish_count(self, order):
-        return order.orderdish_set.aggregate(count=models.Sum('count'))['count'] or 0
+    def get_total_dish_count(self, dinner):
+        return dinner.dinnerdish_set.aggregate(count=models.Sum('count'))['count'] or 0
 
-class Order(models.Model):
+class Dinner(models.Model):
     STATUS_CHOICES = [
         ('dr', "Draft"),
         ('del', "Deleted"), 
@@ -55,26 +55,26 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     formed_at = models.DateTimeField(blank=True, null=True)
     completed_at = models.DateTimeField(blank=True, null=True)
-    creator = models.ForeignKey(User, related_name='orders_created', on_delete=models.SET_NULL, null=True)
-    moderator = models.ForeignKey(User, related_name='orders_moderated', on_delete=models.SET_NULL, null=True, blank=True)
+    creator = models.ForeignKey(User, related_name='dinners_created', on_delete=models.SET_NULL, null=True)
+    moderator = models.ForeignKey(User, related_name='dinners_moderated', on_delete=models.SET_NULL, null=True, blank=True)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=['creator'], condition=models.Q(status='draft'), name='unique_draft_per_user')
         ]
 
-    objects = OrderManager()
+    objects = DinnerManager()
 
     def __str__(self):
         return str(self.id)
 
-class OrderDish(models.Model):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+class DinnerDish(models.Model):
+    dinner = models.ForeignKey(Dinner, on_delete=models.CASCADE)
     dish = models.ForeignKey(Dish, on_delete=models.CASCADE)    
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.CharField(max_length=100)
     count = models.IntegerField()
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['order', 'dish', 'user'], name='unique_order_dish_user')
+            models.UniqueConstraint(fields=['dinner', 'dish'], name='unique_dinner_dish')
         ]
