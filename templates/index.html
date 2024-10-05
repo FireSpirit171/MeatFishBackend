@@ -31,27 +31,38 @@
 
 <div class="row">
     <div class="col-9">
-    {% for dish in dishes %}
         <div class="row">
             <div class="col-3"></div>
-            <div class="col-9">
+    
+            {% for dish in dishes %}
                 {% include "layouts/card.html" with food=dish %}
+    
+                {% if forloop.counter|divisibleby:2 %}
+                    <div class="col-3"></div>
+                </div>
+                <div class="row">
+                    <div class="col-3"></div>
+                {% endif %}
+            {% endfor %}
+    
+            {% if dishes|length|divisibleby:2 == False %}
+                
             </div>
+            {% endif %}
         </div>
-    {% endfor %}
     </div>
 
     <div class="col-3 ps-4">
         <div>
             <div class="row">
                 <h3 class="text-light georgia col-7">Ваша корзина</h3>
-                {% if order %}
+                {% if dinner %}
                     <div class="position-relative col-5">
-                        <a href="{% url 'order' order.id %}">
+                        <a href="{% url 'dinner' dinner.id %}">
                             <img src="{% static "img/basket.png" %}" width="40px">
                         </a>
                         <span class="badge basket-badge position-absolute top-0 start-40 translate-middle">
-                            {{ order.count }}
+                            {{ dinner.count }}
                         </span>
                     </div>
                 {% else %}

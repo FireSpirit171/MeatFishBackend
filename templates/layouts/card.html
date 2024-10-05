@@ -1,26 +1,20 @@
-<div id="{{ food.id }}" class="card mb-3">
-    <div class="row g-0">
-    <div class="col-md-4">
-        <a href="{% url 'dish' food.id %}">
-            <img class="dish-photo dish-scale img-fluid rounded-start h-100" src="{{ food.photo }}">
+<div id="{{ food.id }}" class="card mb-4" style="width: 27rem;">
+    <a href="{% url 'dish' food.id %}">
+        <img src="{{ food.photo }}" class="card-img-top dish-photo dish-scale img-fluid">
+    </a>
+    <div class="card-body">
+        <a href="{% url 'dish' food.id %}" style="text-decoration: none;">
+            <h3 class="card-title text-light georgia mb-0">{{ food.name }}</h3>
         </a>
+        <span><p class="text-start red-text-color fs-5">{{ food.price }}р./{{ food.weight }}г.</p></span>
+        <p class="card-text text-light fs-6 georgia" style="text-align: justify">Category: {{ food.type }}</p>
     </div>
-    <div class="col-md-8">
-        <div class="card-body">
-            <a href="{% url 'dish' food.id %}" style="text-decoration: none;">
-                <h3 class="card-title text-light georgia mb-0">{{ food.name }}</h3>
-            </a>
-            <span><p class="text-start red-text-color fs-5">{{ food.price }}р./{{ food.weight }}г.</p></span>
-            <p class="card-text text-light fs-6 georgia" style="text-align: justify">Category: {{ food.type }}</p>
-        </div>
-        <div>
-            <form method="POST" action="{% url 'add_dish_to_order' food.id %}">
-                {% csrf_token %}
-                <button type="submit" class="btn red-button btn-danger ms-3" style="width: 180px">
-                    <p style="font-style: italic; margin-bottom: 0px">Добавить в корзину</p>
-                </button>
-            </form>
-        </div>
-    </div>
+    <div>
+        <form method="POST" action="{% url 'add_dish_to_dinner' food.id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn red-button btn-danger ms-3" style="width: 180px">
+                <p style="font-style: italic; margin-bottom: 0px">Добавить в корзину</p>
+            </button>
+        </form>
     </div>
 </div>
