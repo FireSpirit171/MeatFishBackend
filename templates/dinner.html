@@ -47,35 +47,7 @@
             {% for dish in dishes %}
             <div class="row">
                 <div class="col-9">
-                    {% with dish_id=dish.0 dish_name=dish.1 dish_price=dish.2 dish_count=dish.3 dish_photo=dish.4 %}
-                        <div id="{{ dish_id }}" class="card mb-3 dish-card" style="height: 120px">
-                            <div class="row g-0">
-                                <div class="col-md-4">
-                                    <a href="{% url 'dish' dish_id %}">
-                                        <img src="{{ dish_photo }}" width="150px" height="118px" class="rounded-start">
-                                    </a>
-                                </div>
-                                <div class="col-md-8">
-                                    <div class="card-body">
-                                        <a href="{% url 'dish' dish_id %}" style="text-decoration: none">
-                                            <h3 class="card-title georgia">{{ dish_name }}</h3>
-                                        </a>
-                                        <div class="bottom-row">
-                                            <div class="dish-price georgia">{{ dish_price }}p.</div>
-                                            <div class="quantity-control">
-                                                <div class="dish-count georgia">{{ dish_count }}</div>
-                                                <div class="red-controls">
-                                                    <span class="control-btn">-</span>
-                                                    <span class="divider"></span>
-                                                    <span class="control-btn">+</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    {% endwith %}
+                    {% include "layouts/dish_in_dinner.html"  with dish_id=dish.0 dish_name=dish.1 dish_price=dish.2 dish_count=dish.3 dish_photo=dish.4 %}
                 </div>
                 <div class="col input-div">
                     <input name="guest" value="{{ person }}" class="input-guest" disabled>

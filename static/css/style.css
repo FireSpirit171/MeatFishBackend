@@ -133,7 +133,8 @@ body {
     border-radius: 25px;
     padding: 5px;
     position: relative;
-    width: 120px;
+    /* width: 120px; */
+    width: 90px;
     height: 30px;
     justify-content: space-between;
 }

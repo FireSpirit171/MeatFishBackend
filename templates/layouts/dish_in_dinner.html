@@ -1,0 +1,27 @@
+<div id="{{ dish_id }}" class="card dish-card" style="height: 120px">
+    <div class="row g-0">
+        <div class="col-md-4">
+            <a href="{% url 'dish' dish_id %}">
+                <img src="{{ dish_photo }}" width="150px" height="118px" class="rounded-start">
+            </a>
+        </div>
+        <div class="col-md-8">
+            <div class="card-body">
+                <a href="{% url 'dish' dish_id %}" style="text-decoration: none">
+                    <h3 class="card-title georgia">{{ dish_name }}</h3>
+                </a>
+                <div class="bottom-row">
+                    <div class="dish-price georgia">{{ dish_price }}p.</div>
+                    <div class="quantity-control">
+                        <div class="dish-count georgia">{{ dish_count }} - шт.</div>
+                        {% comment %} <div class="red-controls">
+                            <span class="control-btn">-</span>
+                            <span class="divider"></span>
+                            <span class="control-btn">+</span>
+                        </div> {% endcomment %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
