@@ -5,6 +5,36 @@ from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from .models import Dish, Dinner
 from .serializers import DishSerializer, DinnerSerializer
+from django.conf import settings
+from minio import Minio
+from django.core.files.uploadedfile import InMemoryUploadedFile
+from rest_framework.response import *
+
+def process_file_upload(file_object: InMemoryUploadedFile, client, image_name):
+    try:
+        client.put_object('meatfish', image_name, file_object, file_object.size)
+        return f"http://localhost:9000/meatfish/{image_name}"
+    except Exception as e:
+        return {"error": str(e)}
+
+def add_pic(new_dish, pic):
+    client = Minio(
+        endpoint=settings.AWS_S3_ENDPOINT_URL,
+        access_key=settings.AWS_ACCESS_KEY_ID,
+        secret_key=settings.AWS_SECRET_ACCESS_KEY,
+        secure=settings.MINIO_USE_SSL
+    )
+    img_obj_name = f"{new_dish.id}.jpg"
+
+    if not pic:
+        return {"error": "Нет файла для изображения."}
+
+    result = process_file_upload(pic, client, img_obj_name)
+    
+    if 'error' in result:
+        return {"error": result['error']}
+
+    return result  # Возвращаем URL загруженного изображения
 
 # View для Dish (блюда)
 class DishList(APIView):
@@ -17,11 +47,20 @@ class DishList(APIView):
         serializer = self.serializer_class(dishes, many=True)
         return Response(serializer.data)
 
-    # Добавление нового блюда
+    # Добавление нового блюда    
     def post(self, request, format=None):
-        serializer = self.serializer_class(data=request.data)
+        pic = request.FILES.get("photo")
+        data = request.data.copy()
+        data.pop('photo', None) 
+        serializer = self.serializer_class(data=data)
         if serializer.is_valid():
-            serializer.save()
+            dish = serializer.save()
+            if pic:
+                pic_url = add_pic(dish, pic)
+                if 'error' in pic_url:
+                    return Response({"error": pic_url['error']}, status=status.HTTP_400_BAD_REQUEST)
+                dish.photo = pic_url
+                dish.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -34,6 +73,35 @@ class DishDetail(APIView):
         dish = get_object_or_404(self.model_class, pk=pk)
         serializer = self.serializer_class(dish)
         return Response(serializer.data)
+    
+    def post(self, request, pk, format=None):
+        dish = get_object_or_404(self.model_class, pk=pk)
+        pic = request.FILES.get("photo")
+
+        if not pic:
+            return Response({"error": "Файл изображения не предоставлен."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if dish.photo:
+            client = Minio(
+                endpoint=settings.AWS_S3_ENDPOINT_URL,
+                access_key=settings.AWS_ACCESS_KEY_ID,
+                secret_key=settings.AWS_SECRET_ACCESS_KEY,
+                secure=settings.MINIO_USE_SSL
+            )
+            old_img_name = dish.photo.split('/')[-1] 
+            try:
+                client.remove_object('meatfish', old_img_name)
+            except Exception as e:
+                return Response({"error": f"Ошибка при удалении старого изображения: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        pic_url = add_pic(dish, pic)
+        if 'error' in pic_url:
+            return Response({"error": pic_url['error']}, status=status.HTTP_400_BAD_REQUEST)
+
+        dish.photo = pic_url
+        dish.save()
+        
+        return Response({"message": "Изображение успешно обновлено.", "photo_url": pic_url}, status=status.HTTP_200_OK)
 
     # Обновление информации о блюде
     def put(self, request, pk, format=None):
@@ -57,11 +125,17 @@ class DinnerList(APIView):
     model_class = Dinner
     serializer_class = DinnerSerializer
 
-    # Получение списка заявок
     def get(self, request, format=None):
-        dinners = self.model_class.objects.all()
-        serializer = self.serializer_class(dinners, many=True)
-        return Response(serializer.data)
+        dinners = self.model_class.objects.exclude(status__in=['dr', 'del'])
+        serialized_dinners = []
+        for dinner in dinners:
+            serialized_dinner = self.serializer_class(dinner).data
+            serialized_dinner['creator'] = dinner.creator.username
+            if dinner.moderator:
+                serialized_dinner['moderator'] = dinner.moderator.username 
+            serialized_dinners.append(serialized_dinner)
+
+        return Response(serialized_dinners)
 
     # Добавление новой заявки
     def post(self, request, format=None):
@@ -75,18 +149,22 @@ class DinnerDetail(APIView):
     model_class = Dinner
     serializer_class = DinnerSerializer
 
-    # Получение информации о заявке
     def get(self, request, pk, format=None):
         dinner = get_object_or_404(self.model_class, pk=pk)
         serializer = self.serializer_class(dinner)
-        return Response(serializer.data)
+        data = serializer.data
+        data['creator'] = dinner.creator.username
+        if dinner.moderator:
+            data['moderator'] = dinner.moderator.username 
+
+        return Response(data)
 
     # Обновление заявки (для модератора)
     def put(self, request, pk, format=None):
         dinner = get_object_or_404(self.model_class, pk=pk)
         serializer = self.serializer_class(dinner, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save(moderator=request.user)  # Устанавливаем модератора
+            serializer.save(moderator=request.user)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

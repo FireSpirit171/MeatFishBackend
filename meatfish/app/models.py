@@ -17,7 +17,7 @@ class Dish(models.Model):
     description = models.TextField()
     price = models.IntegerField()
     weight = models.IntegerField()
-    photo = models.URLField(blank=True, null=True)
+    photo = models.CharField(blank=True, null=True)
     status = models.CharField(choices=STATUS_CHOICES, max_length=7, default='a')
 
     objects = DishManager()
@@ -57,6 +57,7 @@ class Dinner(models.Model):
     completed_at = models.DateTimeField(blank=True, null=True)
     creator = models.ForeignKey(User, related_name='dinners_created', on_delete=models.SET_NULL, null=True)
     moderator = models.ForeignKey(User, related_name='dinners_moderated', on_delete=models.SET_NULL, null=True, blank=True)
+    total_cost = models.IntegerField(default=0)
 
     class Meta:
         constraints = [
