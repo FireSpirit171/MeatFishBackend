@@ -11,7 +11,11 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from rest_framework.response import *
 from django.utils import timezone
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+
 
 def process_file_upload(file_object: InMemoryUploadedFile, client, image_name):
     try:
@@ -230,12 +234,22 @@ class DinnerDishDetail(APIView):
         dinner_dish.delete()  # Удаляем запись м-м
         return Response({"message": "Блюдо успешно удалено из заявки"}, status=status.HTTP_204_NO_CONTENT)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class UserView(APIView):
     def post(self, request, action, format=None):
         if action == 'register':
             serializer = UserSerializer(data=request.data)
             if serializer.is_valid():
-                user = serializer.save()
+                # Получаем проверенные данные
+                validated_data = serializer.validated_data
+                # Создаем пользователя без пароля
+                user = User(
+                    username=validated_data['username'],
+                    email=validated_data['email']
+                )
+                # Устанавливаем хешированный пароль
+                user.set_password(request.data.get('password'))
+                user.save()  # Сохраняем пользователя
                 token, _ = Token.objects.get_or_create(user=user)
                 return Response({
                     'message': 'Регистрация прошла успешно',
@@ -277,6 +291,7 @@ class UserView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({'error': 'Некорректное действие'}, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 # Дополнительный метод PUT для пользователя (функциональное представление)
