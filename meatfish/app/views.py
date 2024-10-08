@@ -291,15 +291,3 @@ class UserView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({'error': 'Некорректное действие'}, status=status.HTTP_400_BAD_REQUEST)
-
-
-
-# Дополнительный метод PUT для пользователя (функциональное представление)
-@api_view(['PUT'])
-def update_dinner_for_user(request, pk):
-    dinner = get_object_or_404(Dinner, pk=pk)
-    serializer = DinnerSerializer(dinner, data=request.data, partial=True)
-    if serializer.is_valid():
-        serializer.save()  # Обновление без назначения модератора
-        return Response(serializer.data)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

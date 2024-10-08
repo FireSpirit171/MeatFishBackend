@@ -91,7 +91,7 @@ DATABASES = {
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
-        # 'rest_framework.authentication.SessionAuthentication',  # Отключить, если не нужен CSRF
+        'rest_framework.authentication.SessionAuthentication',
     ],
 }
 
