@@ -3,13 +3,15 @@ from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
-from .models import Dish, Dinner
-from .serializers import DishSerializer, DinnerSerializer
+from .models import Dish, Dinner, DinnerDish
+from .serializers import DishSerializer, DinnerSerializer, DinnerDishSerializer, UserSerializer
 from django.conf import settings
 from minio import Minio
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from rest_framework.response import *
 from django.utils import timezone
+from django.contrib.auth import authenticate, login, logout
+from rest_framework.authtoken.models import Token
 
 def process_file_upload(file_object: InMemoryUploadedFile, client, image_name):
     try:
@@ -206,6 +208,76 @@ class DinnerDetail(APIView):
         dinner.status = 'del'  # Мягкое удаление
         dinner.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+class DinnerDishDetail(APIView):
+    model_class = DinnerDish
+    serializer_class = DinnerDishSerializer
+
+    def put(self, request, dinner_id, dish_id, format=None):
+        dinner = get_object_or_404(Dinner, pk=dinner_id)
+        dinner_dish = get_object_or_404(self.model_class, dinner=dinner, dish__id=dish_id)
+        
+        serializer = self.serializer_class(dinner_dish, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, dinner_id, dish_id, format=None):
+        dinner = get_object_or_404(Dinner, pk=dinner_id)
+        dinner_dish = get_object_or_404(self.model_class, dinner=dinner, dish__id=dish_id)
+        
+        dinner_dish.delete()  # Удаляем запись м-м
+        return Response({"message": "Блюдо успешно удалено из заявки"}, status=status.HTTP_204_NO_CONTENT)
+
+class UserView(APIView):
+    def post(self, request, action, format=None):
+        if action == 'register':
+            serializer = UserSerializer(data=request.data)
+            if serializer.is_valid():
+                user = serializer.save()
+                token, _ = Token.objects.get_or_create(user=user)
+                return Response({
+                    'message': 'Регистрация прошла успешно',
+                    'token': token.key
+                }, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        elif action == 'authenticate':
+            username = request.data.get('username')
+            password = request.data.get('password')
+            user = authenticate(request, username=username, password=password)
+            if user is not None:
+                login(request, user)
+                token, _ = Token.objects.get_or_create(user=user)
+                return Response({
+                    'message': 'Аутентификация успешна',
+                    'token': token.key
+                }, status=status.HTTP_200_OK)
+            return Response({'error': 'Неправильное имя пользователя или пароль'}, status=status.HTTP_400_BAD_REQUEST)
+
+        elif action == 'logout':
+            if request.user.is_authenticated:
+                request.user.auth_token.delete()
+                logout(request)
+                return Response({'message': 'Вы вышли из системы'}, status=status.HTTP_200_OK)
+            return Response({'error': 'Вы не авторизованы'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'error': 'Некорректное действие'}, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, action, format=None):
+        if action == 'profile':
+            if not request.user.is_authenticated:
+                return Response({'error': 'Вы не авторизованы'}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            serializer = UserSerializer(request.user, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({'message': 'Профиль обновлен', 'user': serializer.data}, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'error': 'Некорректное действие'}, status=status.HTTP_400_BAD_REQUEST)
+
 
 # Дополнительный метод PUT для пользователя (функциональное представление)
 @api_view(['PUT'])
