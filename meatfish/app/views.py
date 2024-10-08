@@ -9,6 +9,7 @@ from django.conf import settings
 from minio import Minio
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from rest_framework.response import *
+from django.utils import timezone
 
 def process_file_upload(file_object: InMemoryUploadedFile, client, image_name):
     try:
@@ -34,20 +35,18 @@ def add_pic(new_dish, pic):
     if 'error' in result:
         return {"error": result['error']}
 
-    return result  # Возвращаем URL загруженного изображения
+    return result 
 
 # View для Dish (блюда)
 class DishList(APIView):
     model_class = Dish
     serializer_class = DishSerializer
 
-    # Получение списка блюд
     def get(self, request, format=None):
-        dishes = self.model_class.objects.filter(status='a')  # Только активные блюда
+        dishes = self.model_class.objects.filter(status='a')
         serializer = self.serializer_class(dishes, many=True)
         return Response(serializer.data)
-
-    # Добавление нового блюда    
+  
     def post(self, request, format=None):
         pic = request.FILES.get("photo")
         data = request.data.copy()
@@ -68,7 +67,6 @@ class DishDetail(APIView):
     model_class = Dish
     serializer_class = DishSerializer
 
-    # Получение информации о блюде
     def get(self, request, pk, format=None):
         dish = get_object_or_404(self.model_class, pk=pk)
         serializer = self.serializer_class(dish)
@@ -103,7 +101,6 @@ class DishDetail(APIView):
         
         return Response({"message": "Изображение успешно обновлено.", "photo_url": pic_url}, status=status.HTTP_200_OK)
 
-    # Обновление информации о блюде
     def put(self, request, pk, format=None):
         dish = get_object_or_404(self.model_class, pk=pk)
         serializer = self.serializer_class(dish, data=request.data, partial=True)
@@ -112,10 +109,9 @@ class DishDetail(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    # Удаление блюда
     def delete(self, request, pk, format=None):
         dish = get_object_or_404(self.model_class, pk=pk)
-        dish.status = 'd'  # Мягкое удаление
+        dish.status = 'd'
         dish.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -137,12 +133,25 @@ class DinnerList(APIView):
 
         return Response(serialized_dinners)
 
-    # Добавление новой заявки
-    def post(self, request, format=None):
+    def put(self, request, format=None):
+        required_fields = ['table_number']
+        for field in required_fields:
+            if field not in request.data or request.data[field] is None:
+                return Response({field: 'Это поле обязательно для заполнения.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        dinner_id = request.data.get('id')
+        if dinner_id:
+            dinner = get_object_or_404(self.model_class, pk=dinner_id)
+            serializer = self.serializer_class(dinner, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save(moderator=request.user)
+                return Response(serializer.data)
+            
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
-            serializer.save(creator=request.user)  # Автоматически присваиваем пользователя
+            dinner = serializer.save(creator=request.user) 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class DinnerDetail(APIView):
@@ -159,14 +168,37 @@ class DinnerDetail(APIView):
 
         return Response(data)
 
-    # Обновление заявки (для модератора)
     def put(self, request, pk, format=None):
         dinner = get_object_or_404(self.model_class, pk=pk)
+        if 'status' in request.data:
+            status = request.data['status']
+            if status in ['f', 'r']: 
+                total_cost = self.calculate_total_cost(dinner)
+                updated_data = request.data.copy()
+                updated_data['total_cost'] = total_cost
+                dinner.completed_at = timezone.now()
+                serializer = self.serializer_class(dinner, data=updated_data, partial=True)
+                if serializer.is_valid():
+                    serializer.save(moderator=request.user)
+                    return Response(serializer.data)
+                
         serializer = self.serializer_class(dinner, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save(moderator=request.user)
             return Response(serializer.data)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def calculate_total_cost(self, dinner):
+        total_cost = 0
+        dinner_dishes = dinner.dinnerdish_set.all() 
+
+        for dinner_dish in dinner_dishes:
+            dish_price = dinner_dish.dish.price 
+            dish_count = dinner_dish.count 
+            total_cost += dish_price * dish_count
+
+        return total_cost
 
     # Удаление заявки
     def delete(self, request, pk, format=None):

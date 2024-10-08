@@ -19,7 +19,7 @@ class DinnerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Dinner
-        fields = ['id', 'table_number', 'status', 'created_at', 'formed_at', 'completed_at', 'creator', 'moderator', 'dishes']
+        fields = ['id', 'table_number', 'total_cost', 'status', 'created_at', 'formed_at', 'completed_at', 'creator', 'moderator', 'dishes']
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
