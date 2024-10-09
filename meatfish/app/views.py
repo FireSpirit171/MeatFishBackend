@@ -12,7 +12,6 @@ from rest_framework.response import *
 from django.utils import timezone
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
-from rest_framework.authtoken.models import Token
 
 class UserSingleton:
     _instance = None
@@ -157,6 +156,7 @@ class DishDetail(APIView):
 
         if not draft_dinner:
             draft_dinner = Dinner.objects.create(
+                table_number = 1,
                 creator=user,
                 status='dr',
                 created_at=timezone.now()
