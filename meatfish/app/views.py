@@ -13,8 +13,6 @@ from django.utils import timezone
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
 
 class UserSingleton:
     _instance = None
@@ -27,6 +25,11 @@ class UserSingleton:
             except User.DoesNotExist:
                 cls._instance = None
         return cls._instance
+
+    @classmethod
+    def clear_instance(cls, user):
+        pass
+
 
 def process_file_upload(file_object: InMemoryUploadedFile, client, image_name):
     try:
@@ -323,29 +326,23 @@ class DinnerDishDetail(APIView):
         dinner = get_object_or_404(Dinner, pk=dinner_id)
         dinner_dish = get_object_or_404(self.model_class, dinner=dinner, dish__id=dish_id)
         
-        dinner_dish.delete()  # Удаляем запись м-м
+        dinner_dish.delete()
         return Response({"message": "Блюдо успешно удалено из заявки"}, status=status.HTTP_204_NO_CONTENT)
 
-@method_decorator(csrf_exempt, name='dispatch')
 class UserView(APIView):
     def post(self, request, action, format=None):
         if action == 'register':
             serializer = UserSerializer(data=request.data)
             if serializer.is_valid():
-                # Получаем проверенные данные
                 validated_data = serializer.validated_data
-                # Создаем пользователя без пароля
                 user = User(
                     username=validated_data['username'],
                     email=validated_data['email']
                 )
-                # Устанавливаем хешированный пароль
                 user.set_password(request.data.get('password'))
-                user.save()  # Сохраняем пользователя
-                token, _ = Token.objects.get_or_create(user=user)
+                user.save()
                 return Response({
-                    'message': 'Регистрация прошла успешно',
-                    'token': token.key
+                    'message': 'Регистрация прошла успешно'
                 }, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -353,33 +350,33 @@ class UserView(APIView):
             username = request.data.get('username')
             password = request.data.get('password')
             user = authenticate(request, username=username, password=password)
+            
             if user is not None:
-                login(request, user)
-                token, _ = Token.objects.get_or_create(user=user)
+                user_data = UserSerializer(user).data
                 return Response({
                     'message': 'Аутентификация успешна',
-                    'token': token.key
-                }, status=status.HTTP_200_OK)
-            return Response({'error': 'Неправильное имя пользователя или пароль'}, status=status.HTTP_400_BAD_REQUEST)
+                    'user': user_data
+                }, status=200)
+            
+            return Response({'error': 'Неправильное имя пользователя или пароль'}, status=400)
 
         elif action == 'logout':
-            if request.user.is_authenticated:
-                request.user.auth_token.delete()
-                logout(request)
-                return Response({'message': 'Вы вышли из системы'}, status=status.HTTP_200_OK)
-            return Response({'error': 'Вы не авторизованы'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'message': 'Вы вышли из системы'}, status=200)
 
-        return Response({'error': 'Некорректное действие'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Некорректное действие'}, status=400)
 
+    # Обновление данных профиля пользователя
     def put(self, request, action, format=None):
         if action == 'profile':
-            if not request.user.is_authenticated:
+            user = UserSingleton.get_instance()
+            if user is None:
                 return Response({'error': 'Вы не авторизованы'}, status=status.HTTP_401_UNAUTHORIZED)
             
-            serializer = UserSerializer(request.user, data=request.data, partial=True)
+            serializer = UserSerializer(user, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
                 return Response({'message': 'Профиль обновлен', 'user': serializer.data}, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({'error': 'Некорректное действие'}, status=status.HTTP_400_BAD_REQUEST)
+
