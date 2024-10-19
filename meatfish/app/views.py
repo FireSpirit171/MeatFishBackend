@@ -20,7 +20,7 @@ class UserSingleton:
     def get_instance(cls):
         if cls._instance is None:
             try:
-                cls._instance = User.objects.get(id=4)
+                cls._instance = User.objects.get(id=11)
             except User.DoesNotExist:
                 cls._instance = None
         return cls._instance
@@ -206,7 +206,7 @@ class DinnerList(APIView):
         status = request.query_params.get('status')
 
         # Фильтруем ужины по пользователю и статусам
-        dinners = self.model_class.objects.exclude(status__in=['dr', 'del'])
+        dinners = self.model_class.objects.filter(creator=user).exclude(status__in=['dr', 'del'])
 
         if date_from:
             dinners = dinners.filter(created_at__gte=date_from)
