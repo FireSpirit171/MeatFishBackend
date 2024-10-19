@@ -337,29 +337,29 @@ class Command(BaseCommand):
 
         dinner_dish_data = [
             # Для первого заказа один человек (первый пользователь)
-            {'dinner_id': 1, 'dish_id': 1, 'user': 'user1', 'count': 1},
+            {'dinner_id': 1, 'dish_id': 1, 'guest': 'user1', 'count': 1},
             # Во втором заказе 1 и 2 пользователь
-            {'dinner_id': 2, 'dish_id': 2, 'user': 'user1', 'count': 1},
-            {'dinner_id': 2, 'dish_id': 3, 'user': 'user2', 'count': 1},
+            {'dinner_id': 2, 'dish_id': 2, 'guest': 'user1', 'count': 1},
+            {'dinner_id': 2, 'dish_id': 3, 'guest': 'user2', 'count': 1},
             # В третьем заказе 1, 2 и 3 пользователь
-            {'dinner_id': 3, 'dish_id': 4, 'user': 'user1', 'count': 1},
-            {'dinner_id': 3, 'dish_id': 5, 'user': 'user2', 'count': 1},
-            {'dinner_id': 3, 'dish_id': 6, 'user': 'user3', 'count': 1},
+            {'dinner_id': 3, 'dish_id': 4, 'guest': 'user1', 'count': 1},
+            {'dinner_id': 3, 'dish_id': 5, 'guest': 'user2', 'count': 1},
+            {'dinner_id': 3, 'dish_id': 6, 'guest': 'user3', 'count': 1},
             # В четвертом заказе только 4 пользователь
-            {'dinner_id': 4, 'dish_id': 7, 'user': 'user4', 'count': 1},
+            {'dinner_id': 4, 'dish_id': 7, 'guest': 'user4', 'count': 1},
             # В пятом заказе 4 и 5 пользователь
-            {'dinner_id': 5, 'dish_id': 8, 'user': 'user4', 'count': 1},
-            {'dinner_id': 5, 'dish_id': 9, 'user': 'user5', 'count': 1},
+            {'dinner_id': 5, 'dish_id': 8, 'guest': 'user4', 'count': 1},
+            {'dinner_id': 5, 'dish_id': 9, 'guest': 'user5', 'count': 1},
         ]
 
         for od in dinner_dish_data:
             dinner_dish, created = DinnerDish.objects.get_or_create(
                 dinner_id=od['dinner_id'],
                 dish_id=od['dish_id'],
-                user=od['user'],
+                guest=od['guest'],
                 defaults={'count': od['count']}
             )
             if created:
-                self.stdout.write(self.style.SUCCESS(f'DinnerDish entry for dinner {od["dinner_id"]}, dish {od["dish_id"]}, user {od["user"]} created.'))
+                self.stdout.write(self.style.SUCCESS(f'DinnerDish entry for dinner {od["dinner_id"]}, dish {od["dish_id"]}, user {od["guest"]} created.'))
             else:
-                self.stdout.write(self.style.WARNING(f'DinnerDish entry for dinner {od["dinner_id"]}, dish {od["dish_id"]}, user {od["user"]} already exists.'))
+                self.stdout.write(self.style.WARNING(f'DinnerDish entry for dinner {od["dinner_id"]}, dish {od["dish_id"]}, user {od["guest"]} already exists.'))

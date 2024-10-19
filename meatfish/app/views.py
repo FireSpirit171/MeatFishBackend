@@ -20,7 +20,7 @@ class UserSingleton:
     def get_instance(cls):
         if cls._instance is None:
             try:
-                cls._instance = User.objects.get(id=11)
+                cls._instance = User.objects.get(id=4)
             except User.DoesNotExist:
                 cls._instance = None
         return cls._instance
@@ -86,19 +86,14 @@ class DishList(APIView):
         return Response(response_data)
   
     def post(self, request, format=None):
-        pic = request.FILES.get("photo")
         data = request.data.copy()
-        data.pop('photo', None) 
+        data['photo'] = None
+
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
-            dish = serializer.save()
-            if pic:
-                pic_url = add_pic(dish, pic)
-                if 'error' in pic_url:
-                    return Response({"error": pic_url['error']}, status=status.HTTP_400_BAD_REQUEST)
-                dish.photo = pic_url
-                dish.save()
+            dish = serializer.save() 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class DishDetail(APIView):
@@ -210,18 +205,19 @@ class DinnerList(APIView):
         date_to = request.query_params.get('date_to')
         status = request.query_params.get('status')
 
-        dinners = self.model_class.objects.filter(creator=user).exclude(status__in=['dr', 'del'])
+        # Фильтруем ужины по пользователю и статусам
+        dinners = self.model_class.objects.exclude(status__in=['dr', 'del'])
 
         if date_from:
             dinners = dinners.filter(created_at__gte=date_from)
         if date_to:
             dinners = dinners.filter(created_at__lte=date_to)
-
         if status:
             dinners = dinners.filter(status=status)
 
+        # Сериализуем данные
         serialized_dinners = [
-            {**self.serializer_class(dinner).data, 'creator': dinner.creator.username, 'moderator': dinner.moderator.username}
+            {**self.serializer_class(dinner).data, 'creator': dinner.creator.username, 'moderator': dinner.moderator.username if dinner.moderator else None}
             for dinner in dinners
         ]
 
@@ -269,8 +265,26 @@ class DinnerDetail(APIView):
 
         if 'status' in request.data:
             status_value = request.data['status']
-            if status_value not in ['f', 'r']:
+
+            if status_value in ['del', 'f']:
+                if dinner.creator == user:
+                    updated_data = request.data.copy()
+
+                    if status_value == 'f':
+                        dinner.formed_at = timezone.now()
+
+                    serializer = self.serializer_class(dinner, data=updated_data, partial=True)
+                    if serializer.is_valid():
+                        serializer.save()
+                        return Response(serializer.data)
+                else:
+                    return Response({"error": "Отказано в доступе"}, status=status.HTTP_403_FORBIDDEN)
+                
+            if status_value not in ['c', 'r']:
                 return Response({"error": "Неверный статус."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if dinner.status != 'f':
+                return Response({"error": "Заявка ещё не сформирована."}, status=status.HTTP_403_FORBIDDEN)
 
             total_cost = self.calculate_total_cost(dinner)
             updated_data = request.data.copy()
@@ -292,11 +306,11 @@ class DinnerDetail(APIView):
 
     def calculate_total_cost(self, dinner):
         total_cost = 0
-        dinner_dishes = dinner.dinnerdish_set.all() 
+        dinner_dishes = dinner.dinnerdish_set.all()
 
         for dinner_dish in dinner_dishes:
-            dish_price = dinner_dish.dish.price 
-            dish_count = dinner_dish.count 
+            dish_price = dinner_dish.dish.price
+            dish_count = dinner_dish.count
             total_cost += dish_price * dish_count
 
         return total_cost
@@ -307,6 +321,7 @@ class DinnerDetail(APIView):
         dinner.status = 'del'  # Мягкое удаление
         dinner.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
     
 class DinnerDishDetail(APIView):
     model_class = DinnerDish

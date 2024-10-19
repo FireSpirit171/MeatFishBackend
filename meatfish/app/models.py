@@ -72,7 +72,7 @@ class Dinner(models.Model):
 class DinnerDish(models.Model):
     dinner = models.ForeignKey(Dinner, on_delete=models.CASCADE)
     dish = models.ForeignKey(Dish, on_delete=models.CASCADE)    
-    user = models.CharField(max_length=100)
+    guest = models.CharField(max_length=100)
     count = models.IntegerField()
 
     class Meta:
