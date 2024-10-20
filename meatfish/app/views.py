@@ -1,8 +1,10 @@
 from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.views import APIView
-from django.http import Http404
+from rest_framework.viewsets import ModelViewSet
+from rest_framework.permissions import AllowAny
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from django.http import Http404, HttpResponse
 from .models import Dish, Dinner, DinnerDish
 from .serializers import *
 from django.conf import settings
@@ -10,25 +12,10 @@ from minio import Minio
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from rest_framework.response import *
 from django.utils import timezone
-from django.contrib.auth import authenticate
+from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
-
-class UserSingleton:
-    _instance = None
-
-    @classmethod
-    def get_instance(cls):
-        if cls._instance is None:
-            try:
-                cls._instance = CustomUser.objects.get(id=11)
-            except CustomUser.DoesNotExist:
-                cls._instance = None
-        return cls._instance
-
-    @classmethod
-    def clear_instance(cls, user):
-        pass
-
+from django.contrib.auth import authenticate, login, logout
+from django.views.decorators.csrf import csrf_exempt
 
 def process_file_upload(file_object: InMemoryUploadedFile, client, image_name):
     try:
@@ -71,7 +58,7 @@ class DishList(APIView):
         if max_price:
             dishes = dishes.filter(price__lte=max_price)
 
-        user = UserSingleton.get_instance()
+        user = request.user
         draft_dinner_id = None
         if user:
             draft_dinner = Dinner.objects.filter(creator=user, status='dr').first()
@@ -171,7 +158,7 @@ class DishImageUpdate(APIView):
 class DishAddToDraft(APIView):
     @swagger_auto_schema()
     def post(self, request, pk, format=None):
-        user = UserSingleton.get_instance()
+        user = request.user
         if not user:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 
@@ -194,14 +181,13 @@ class DishAddToDraft(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-
 # View для Dinner (заявки)
 class DinnerList(APIView):
     model_class = Dinner
     serializer_class = DinnerSerializer
 
     def get(self, request, format=None):
-        user = UserSingleton.get_instance()
+        user = request.user
 
         # Получаем фильтры из запросов
         date_from = request.query_params.get('date_from')
@@ -228,7 +214,7 @@ class DinnerList(APIView):
 
     @swagger_auto_schema(request_body=serializer_class)
     def put(self, request, format=None):
-        user = UserSingleton.get_instance()
+        user = request.user
         required_fields = ['table_number']
         for field in required_fields:
             if field not in request.data or request.data[field] is None:
@@ -266,7 +252,7 @@ class DinnerDetail(APIView):
     @swagger_auto_schema(request_body=serializer_class)
     def put(self, request, pk, format=None):
         dinner = get_object_or_404(self.model_class, pk=pk)
-        user = UserSingleton.get_instance()
+        user = request.user
 
         if 'status' in request.data:
             status_value = request.data['status']
@@ -350,54 +336,91 @@ class DinnerDishDetail(APIView):
         dinner_dish.delete()
         return Response({"message": "Блюдо успешно удалено из заявки"}, status=status.HTTP_204_NO_CONTENT)
 
-class UserView(APIView):
-    def post(self, request, action, format=None):
-        if action == 'register':
-            serializer = UserSerializer(data=request.data)
-            if serializer.is_valid():
-                validated_data = serializer.validated_data
-                user = CustomUser(
-                    username=validated_data['username'],
-                    email=validated_data['email']
-                )
-                user.set_password(request.data.get('password'))
-                user.save()
-                return Response({
-                    'message': 'Регистрация прошла успешно'
-                }, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+class UserViewSet(ModelViewSet):
+    queryset = CustomUser.objects.all()
+    serializer_class = UserSerializer
+    model_class = CustomUser
 
-        elif action == 'authenticate':
-            username = request.data.get('username')
-            password = request.data.get('password')
-            user = authenticate(request, username=username, password=password)
+    def create(self, request):
+        if self.model_class.objects.filter(email=request.data['email']).exists():
+            return Response({'status': 'Exist'}, status=400)
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            print(serializer.data)
+            self.model_class.objects.create_user(email=serializer.data['email'],
+                                     password=serializer.data['password'],
+                                     is_superuser=serializer.data['is_superuser'],
+                                     is_staff=serializer.data['is_staff'])
+            return Response({'status': 'Success'}, status=200)
+        return Response({'status': 'Error', 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+@permission_classes([AllowAny])
+@authentication_classes([])
+@csrf_exempt
+@swagger_auto_schema(method='post', request_body=UserSerializer)
+@api_view(['Post'])
+def login_view(request):
+    email = request.data["email"]
+    password = request.data["password"]
+    user = authenticate(request, email=email, password=password)
+    if user is not None:
+        login(request, user)
+        return HttpResponse("{'status': 'ok'}")
+    else:
+        return HttpResponse("{'status': 'error', 'error': 'login failed'}")
+
+def logout_view(request):
+    logout(request)
+    return Response({'status': 'Success'})
+
+# class UserView(APIView):
+#     def post(self, request, action, format=None):
+#         if action == 'register':
+#             serializer = UserSerializer(data=request.data)
+#             if serializer.is_valid():
+#                 validated_data = serializer.validated_data
+#                 user = CustomUser(
+#                     username=validated_data['username'],
+#                     email=validated_data['email']
+#                 )
+#                 user.set_password(request.data.get('password'))
+#                 user.save()
+#                 return Response({
+#                     'message': 'Регистрация прошла успешно'
+#                 }, status=status.HTTP_201_CREATED)
+#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+#         elif action == 'authenticate':
+#             username = request.data.get('username')
+#             password = request.data.get('password')
+#             user = authenticate(request, username=username, password=password)
             
-            if user is not None:
-                user_data = UserSerializer(user).data
-                return Response({
-                    'message': 'Аутентификация успешна',
-                    'user': user_data
-                }, status=200)
+#             if user is not None:
+#                 user_data = UserSerializer(user).data
+#                 return Response({
+#                     'message': 'Аутентификация успешна',
+#                     'user': user_data
+#                 }, status=200)
             
-            return Response({'error': 'Неправильное имя пользователя или пароль'}, status=400)
+#             return Response({'error': 'Неправильное имя пользователя или пароль'}, status=400)
 
-        elif action == 'logout':
-            return Response({'message': 'Вы вышли из системы'}, status=200)
+#         elif action == 'logout':
+#             return Response({'message': 'Вы вышли из системы'}, status=200)
 
-        return Response({'error': 'Некорректное действие'}, status=400)
+#         return Response({'error': 'Некорректное действие'}, status=400)
 
-    # Обновление данных профиля пользователя
-    def put(self, request, action, format=None):
-        if action == 'profile':
-            user = UserSingleton.get_instance()
-            if user is None:
-                return Response({'error': 'Вы не авторизованы'}, status=status.HTTP_401_UNAUTHORIZED)
+#     # Обновление данных профиля пользователя
+#     def put(self, request, action, format=None):
+#         if action == 'profile':
+#             user = UserSingleton.get_instance()
+#             if user is None:
+#                 return Response({'error': 'Вы не авторизованы'}, status=status.HTTP_401_UNAUTHORIZED)
             
-            serializer = UserSerializer(user, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return Response({'message': 'Профиль обновлен', 'user': serializer.data}, status=status.HTTP_200_OK)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#             serializer = UserSerializer(user, data=request.data, partial=True)
+#             if serializer.is_valid():
+#                 serializer.save()
+#                 return Response({'message': 'Профиль обновлен', 'user': serializer.data}, status=status.HTTP_200_OK)
+#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({'error': 'Некорректное действие'}, status=status.HTTP_400_BAD_REQUEST)
+#         return Response({'error': 'Некорректное действие'}, status=status.HTTP_400_BAD_REQUEST)
 

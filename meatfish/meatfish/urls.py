@@ -37,8 +37,10 @@ schema_view = get_schema_view(
 )
 
 router = routers.DefaultRouter()
+router.register(r'user', views.UserViewSet, basename='user')
 
 urlpatterns = [
+    path('', include(router.urls)),
     path('dishes/', views.DishList.as_view(), name='dish-list'),
     path('dishes/<int:pk>/', views.DishDetail.as_view(), name='dish-detail'),
     path('dishes/<int:pk>/image/', views.DishImageUpdate.as_view(), name='dish-update-image'),
@@ -46,9 +48,10 @@ urlpatterns = [
     path('dinners/', views.DinnerList.as_view(), name='dinner-list'),
     path('dinners/<int:pk>/', views.DinnerDetail.as_view(), name='dinner-detail'),
     path('dinners/<int:dinner_id>/dishes/<int:dish_id>/', views.DinnerDishDetail.as_view(), name='dinner-dish-detail'),
-    path('users/<str:action>/', views.UserView.as_view(), name='user-action'),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     path('admin/', admin.site.urls),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    path('api/', include(router.urls)),
+    path('login/',  views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
 ]
-
