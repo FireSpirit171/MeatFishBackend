@@ -37,7 +37,6 @@ schema_view = get_schema_view(
 )
 
 router = routers.DefaultRouter()
-router.register(r'user', views.UserViewSet, basename='user')
 
 urlpatterns = [
     path('', include(router.urls)),
@@ -47,11 +46,15 @@ urlpatterns = [
     path('dishes/<int:pk>/draft/', views.DishAddToDraft.as_view(), name='dish-add-to-draft'),
     path('dinners/', views.DinnerList.as_view(), name='dinner-list'),
     path('dinners/<int:pk>/', views.DinnerDetail.as_view(), name='dinner-detail'),
+    path('dinners/<int:pk>/edit/', views.DinnerDetail.as_view(), name='dinner-detail-edit'),
+    path('dinners/<int:pk>/form/', views.DinnerDetail.as_view(), name='dinner-detail-form'),
+    path('dinners/<int:pk>/complete/', views.DinnerDetail.as_view(), name='dinner-detail-complete'),
     path('dinners/<int:dinner_id>/dishes/<int:dish_id>/', views.DinnerDishDetail.as_view(), name='dinner-dish-detail'),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     path('admin/', admin.site.urls),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    path('api/', include(router.urls)),
     path('login/',  views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
+    path('users/auth/', views.UserViewSet.as_view({'post': 'create'}), name='user-register'),
+    path('users/profile/', views.UserViewSet.as_view({'put': 'profile'}), name='user-profile'),
 ]

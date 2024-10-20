@@ -2,8 +2,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
-from rest_framework.permissions import AllowAny
-from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly, IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes, authentication_classes, action
 from django.http import Http404, HttpResponse
 from .models import Dish, Dinner, DinnerDish
 from .serializers import *
@@ -16,6 +16,16 @@ from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from django.contrib.auth import authenticate, login, logout
 from django.views.decorators.csrf import csrf_exempt
+from app.permissions import *
+
+def method_permission_classes(classes):
+    def decorator(func):
+        def decorated_func(self, *args, **kwargs):
+            self.permission_classes = classes        
+            self.check_permissions(self.request)
+            return func(self, *args, **kwargs)
+        return decorated_func
+    return decorator
 
 def process_file_upload(file_object: InMemoryUploadedFile, client, image_name):
     try:
@@ -185,6 +195,7 @@ class DishAddToDraft(APIView):
 class DinnerList(APIView):
     model_class = Dinner
     serializer_class = DinnerSerializer
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, format=None):
         user = request.user
@@ -195,7 +206,10 @@ class DinnerList(APIView):
         status = request.query_params.get('status')
 
         # Фильтруем ужины по пользователю и статусам
-        dinners = self.model_class.objects.filter(creator=user).exclude(status__in=['dr', 'del'])
+        if user.is_staff:
+            dinners = self.model_class.objects.all()
+        else:
+            dinners = self.model_class.objects.filter(creator=user).exclude(status__in=['dr', 'del'])
 
         if date_from:
             dinners = dinners.filter(created_at__gte=date_from)
@@ -213,6 +227,7 @@ class DinnerList(APIView):
         return Response(serialized_dinners)
 
     @swagger_auto_schema(request_body=serializer_class)
+    @method_permission_classes([IsAdmin, IsManager])  # Разрешаем только модераторам и администраторам
     def put(self, request, format=None):
         user = request.user
         required_fields = ['table_number']
@@ -238,63 +253,101 @@ class DinnerList(APIView):
 class DinnerDetail(APIView):
     model_class = Dinner
     serializer_class = DinnerSerializer
+    permission_classes = [IsAuthenticated]
 
+    # Получение заявки
     def get(self, request, pk, format=None):
         dinner = get_object_or_404(self.model_class, pk=pk)
         serializer = self.serializer_class(dinner)
         data = serializer.data
         data['creator'] = dinner.creator.email
         if dinner.moderator:
-            data['moderator'] = dinner.moderator.email 
-
+            data['moderator'] = dinner.moderator.email
         return Response(data)
 
-    @swagger_auto_schema(request_body=serializer_class)
     def put(self, request, pk, format=None):
+        # Получаем полный путь запроса
+        full_path = request.path
+
+        # Проверяем, заканчивается ли путь на /form/, /complete/ или /edit/
+        if full_path.endswith('/form/'):
+            return self.put_creator(request, pk)
+        elif full_path.endswith('/complete/'):
+            return self.put_moderator(request, pk)
+        elif full_path.endswith('/edit/'):
+            return self.put_edit(request, pk)
+
+        return Response({"error": "Неверный путь"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # PUT для создателя: формирование заявки
+    def put_creator(self, request, pk):
         dinner = get_object_or_404(self.model_class, pk=pk)
         user = request.user
 
+        if user == dinner.creator:
+
+            # Проверка на обязательные поля
+            required_fields = ['table_number']
+            for field in required_fields:
+                if field not in request.data:
+                    return Response({"error": f"Поле {field} является обязательным."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Установка статуса 'f' (сформирована) и даты формирования
+            if 'status' in request.data and request.data['status'] == 'f':
+                dinner.formed_at = timezone.now()
+                updated_data = request.data.copy()
+
+                serializer = self.serializer_class(dinner, data=updated_data, partial=True)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(serializer.data)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            return Response({"error": "Создатель может только формировать заявку."}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"error": "Отказано в доступе"}, status=status.HTTP_403_FORBIDDEN)        
+
+    # PUT для модератора: завершение или отклонение заявки
+    @method_permission_classes([IsManager])  # Разрешаем только модераторам
+    def put_moderator(self, request, pk):
+        dinner = get_object_or_404(self.model_class, pk=pk)
+        user = request.user
+        
         if 'status' in request.data:
             status_value = request.data['status']
 
-            if status_value in ['del', 'f']:
-                if dinner.creator == user:
+            # Модератор может завершить ('c') или отклонить ('r') заявку
+            if status_value in ['c', 'r']:
+                if dinner.status != 'f':
+                    return Response({"error": "Заявка должна быть сначала сформирована."}, status=status.HTTP_403_FORBIDDEN)
+
+                # Установка даты завершения и расчёт стоимости для завершённых заявок
+                if status_value == 'c':
+                    dinner.completed_at = timezone.now()
+                    total_cost = self.calculate_total_cost(dinner)
                     updated_data = request.data.copy()
+                    updated_data['total_cost'] = total_cost
 
-                    if status_value == 'f':
-                        dinner.formed_at = timezone.now()
+                serializer = self.serializer_class(dinner, data=updated_data, partial=True)
+                if serializer.is_valid():
+                    serializer.save(moderator=user)
+                    return Response(serializer.data)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-                    serializer = self.serializer_class(dinner, data=updated_data, partial=True)
-                    if serializer.is_valid():
-                        serializer.save()
-                        return Response(serializer.data)
-                else:
-                    return Response({"error": "Отказано в доступе"}, status=status.HTTP_403_FORBIDDEN)
-                
-            if status_value not in ['c', 'r']:
-                return Response({"error": "Неверный статус."}, status=status.HTTP_400_BAD_REQUEST)
-            
-            if dinner.status != 'f':
-                return Response({"error": "Заявка ещё не сформирована."}, status=status.HTTP_403_FORBIDDEN)
+        return Response({"error": "Модератор может только завершить или отклонить заявку."}, status=status.HTTP_400_BAD_REQUEST)
 
-            total_cost = self.calculate_total_cost(dinner)
-            updated_data = request.data.copy()
-            updated_data['total_cost'] = total_cost
-            dinner.completed_at = timezone.now()
-            
-            serializer = self.serializer_class(dinner, data=updated_data, partial=True)
-            if serializer.is_valid():
-                serializer.save(moderator=user)
-                return Response(serializer.data)
+    def put_edit(self, request, pk):
+        dinner = get_object_or_404(self.model_class, pk=pk)
 
-        # Если статус не был передан, пробуем обновить остальные данные
+        # Обновление дополнительных полей
         serializer = self.serializer_class(dinner, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save(moderator=user)
+            serializer.save()
             return Response(serializer.data)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    # Вычисление общей стоимости заявки
     def calculate_total_cost(self, dinner):
         total_cost = 0
         dinner_dishes = dinner.dinnerdish_set.all()
@@ -306,7 +359,7 @@ class DinnerDetail(APIView):
 
         return total_cost
 
-    # Удаление заявки
+    # Мягкое удаление заявки
     def delete(self, request, pk, format=None):
         dinner = get_object_or_404(self.model_class, pk=pk)
         dinner.status = 'del'  # Мягкое удаление
@@ -341,24 +394,44 @@ class UserViewSet(ModelViewSet):
     serializer_class = UserSerializer
     model_class = CustomUser
 
+    def get_permissions(self):
+        # Удаляем ненужные проверки, чтобы любой пользователь мог обновить свой профиль
+        if self.action == 'create':
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
     def create(self, request):
         if self.model_class.objects.filter(email=request.data['email']).exists():
             return Response({'status': 'Exist'}, status=400)
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
-            print(serializer.data)
-            self.model_class.objects.create_user(email=serializer.data['email'],
-                                     password=serializer.data['password'],
-                                     is_superuser=serializer.data['is_superuser'],
-                                     is_staff=serializer.data['is_staff'])
+            self.model_class.objects.create_user(
+                email=serializer.data['email'],
+                password=serializer.data['password'],
+                is_superuser=serializer.data['is_superuser'],
+                is_staff=serializer.data['is_staff']
+            )
             return Response({'status': 'Success'}, status=200)
         return Response({'status': 'Error', 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
+    # Обновление данных профиля пользователя
+    @action(detail=False, methods=['put'], permission_classes=[AllowAny])
+    def profile(self, request, format=None):
+        user = request.user
+        if user is None:
+            return Response({'error': 'Вы не авторизованы'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        serializer = self.serializer_class(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'message': 'Профиль обновлен', 'user': serializer.data}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 @permission_classes([AllowAny])
 @authentication_classes([])
-@csrf_exempt
 @swagger_auto_schema(method='post', request_body=UserSerializer)
 @api_view(['Post'])
+@csrf_exempt
 def login_view(request):
     email = request.data["email"]
     password = request.data["password"]
