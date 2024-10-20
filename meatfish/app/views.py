@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes, authentication_classes, action
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from .models import Dish, Dinner, DinnerDish
 from .serializers import *
 from django.conf import settings
@@ -17,6 +17,10 @@ from drf_yasg.utils import swagger_auto_schema
 from django.contrib.auth import authenticate, login, logout
 from django.views.decorators.csrf import csrf_exempt
 from app.permissions import *
+import redis
+import uuid
+
+session_storage = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT)
 
 def method_permission_classes(classes):
     def decorator(func):
@@ -69,6 +73,7 @@ class DishList(APIView):
             dishes = dishes.filter(price__lte=max_price)
 
         user = request.user
+        print(user)
         draft_dinner_id = None
         if user:
             draft_dinner = Dinner.objects.filter(creator=user, status='dr').first()
@@ -427,18 +432,28 @@ class UserViewSet(ModelViewSet):
             return Response({'message': 'Профиль обновлен', 'user': serializer.data}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@permission_classes([AllowAny])
+
 @authentication_classes([])
 @swagger_auto_schema(method='post', request_body=UserSerializer)
 @api_view(['Post'])
 @csrf_exempt
+@permission_classes([AllowAny])
 def login_view(request):
-    email = request.data["email"]
+    username = request.data["email"] 
     password = request.data["password"]
-    user = authenticate(request, email=email, password=password)
+
+    print(username)
+    print(password)
+
+    user = authenticate(request, email=username, password=password)
     if user is not None:
-        login(request, user)
-        return HttpResponse("{'status': 'ok'}")
+        random_key = str(uuid.uuid4())
+        session_storage.set(random_key, username)
+
+        response = HttpResponse("{'status': 'ok'}")
+        response.set_cookie("session_id", random_key)
+
+        return response
     else:
         return HttpResponse("{'status': 'error', 'error': 'login failed'}")
 
