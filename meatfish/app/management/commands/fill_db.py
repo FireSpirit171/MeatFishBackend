@@ -1,6 +1,5 @@
 from django.core.management.base import BaseCommand
-from django.contrib.auth.models import User
-from app.models import Dish, Dinner, DinnerDish
+from app.models import Dish, Dinner, DinnerDish, CustomUser
 
 URL = 'http://127.0.0.1:9000/meatfish/{}.jpg'
 FOOD_DATA = [
@@ -299,22 +298,40 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f'Dish "{dish.name}" already exists.'))
 
         for i in range(1, 11):
+            email = f'user{i}@example.com'
             password = ''.join(str(x) for x in range(1, i+1)) 
-            user, created = User.objects.get_or_create(
-                username=f'user{i}',
-                defaults={'password': password}
+            user, created = CustomUser.objects.get_or_create(
+                email=email,
             )
+            
             if created:
-                user.set_password(password)
+                user.set_password(password)  # Устанавливаем пароль, чтобы он был захеширован
                 user.save()
 
-                if i == 9 or i == 10: 
+                if i == 9 or i == 10:
                     user.is_staff = True
                     user.save()
 
-                self.stdout.write(self.style.SUCCESS(f'User "{user.username}" created with password "{password}".'))
+                self.stdout.write(self.style.SUCCESS(f'User "{user.email}" created with password "{password}".'))
             else:
-                self.stdout.write(self.style.WARNING(f'User "{user.username}" already exists.'))
+                self.stdout.write(self.style.WARNING(f'User "{user.email}" already exists.'))
+
+        # Добавляем вас как пользователя
+        email = 'ubuntu@ubuntu.com'
+        password = '123'
+        user, created = CustomUser.objects.get_or_create(
+            email=email,
+            defaults={'password': password}
+        )
+        if created:
+            user.set_password(password)
+            user.is_staff = True
+            user.is_superuser = True
+            user.save()
+            self.stdout.write(self.style.SUCCESS(f'User "{user.email}" created with password "{password}".'))
+        else:
+            self.stdout.write(self.style.WARNING(f'User "{user.email}" already exists.'))
+
 
         dinners_data = [
             {'table_number': 1, 'creator_id': 1},

@@ -2,7 +2,6 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.views import APIView
-from rest_framework.decorators import api_view
 from django.http import Http404
 from .models import Dish, Dinner, DinnerDish
 from .serializers import *
@@ -12,7 +11,6 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from rest_framework.response import *
 from django.utils import timezone
 from django.contrib.auth import authenticate
-from django.contrib.auth.models import User
 from drf_yasg.utils import swagger_auto_schema
 
 class UserSingleton:
@@ -22,8 +20,8 @@ class UserSingleton:
     def get_instance(cls):
         if cls._instance is None:
             try:
-                cls._instance = User.objects.get(id=11)
-            except User.DoesNotExist:
+                cls._instance = CustomUser.objects.get(id=11)
+            except CustomUser.DoesNotExist:
                 cls._instance = None
         return cls._instance
 
@@ -222,7 +220,7 @@ class DinnerList(APIView):
 
         # Сериализуем данные
         serialized_dinners = [
-            {**self.serializer_class(dinner).data, 'creator': dinner.creator.username, 'moderator': dinner.moderator.username if dinner.moderator else None}
+            {**self.serializer_class(dinner).data, 'creator': dinner.creator.email, 'moderator': dinner.moderator.email if dinner.moderator else None}
             for dinner in dinners
         ]
 
@@ -259,9 +257,9 @@ class DinnerDetail(APIView):
         dinner = get_object_or_404(self.model_class, pk=pk)
         serializer = self.serializer_class(dinner)
         data = serializer.data
-        data['creator'] = dinner.creator.username
+        data['creator'] = dinner.creator.email
         if dinner.moderator:
-            data['moderator'] = dinner.moderator.username 
+            data['moderator'] = dinner.moderator.email 
 
         return Response(data)
 
@@ -358,7 +356,7 @@ class UserView(APIView):
             serializer = UserSerializer(data=request.data)
             if serializer.is_valid():
                 validated_data = serializer.validated_data
-                user = User(
+                user = CustomUser(
                     username=validated_data['username'],
                     email=validated_data['email']
                 )

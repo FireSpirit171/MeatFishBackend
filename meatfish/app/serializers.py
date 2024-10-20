@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from app.models import Dish, Dinner, DinnerDish
+from app.models import Dish, Dinner, DinnerDish, CustomUser
 
 class DishSerializer(serializers.ModelSerializer):
     class Meta:
@@ -42,3 +42,11 @@ class DinnerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Dinner
         fields = ['id', 'table_number', 'total_cost', 'status', 'created_at', 'formed_at', 'completed_at', 'creator', 'moderator', 'dishes']
+
+
+class UserSerializer(serializers.ModelSerializer):
+    is_staff = serializers.BooleanField(default=False, required=False)
+    is_superuser = serializers.BooleanField(default=False, required=False)
+    class Meta:
+        model = CustomUser
+        fields = ['email', 'password', 'is_staff', 'is_superuser']

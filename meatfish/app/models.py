@@ -1,7 +1,46 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, UserManager
 import segno
 from io import BytesIO
+
+class NewUserManager(UserManager):
+    def create_user(self,email,password=None, **extra_fields):
+        if not email:
+            raise ValueError('User must have an email address')
+        
+        email = self.normalize_email(email) 
+        user = self.model(email=email, **extra_fields) 
+        user.set_password(password)
+        user.save(using=self.db)
+        return user
+
+class CustomUser(AbstractBaseUser, PermissionsMixin):
+    email = models.EmailField(("email адрес"), unique=True)
+    password = models.CharField(verbose_name="Пароль")    
+    is_staff = models.BooleanField(default=False, verbose_name="Является ли пользователь менеджером?")
+    is_superuser = models.BooleanField(default=False, verbose_name="Является ли пользователь админом?")
+    
+    groups = models.ManyToManyField(
+        'auth.Group',
+        related_name='customuser_set',
+        blank=True,
+        help_text=('The groups this user belongs to. A user will get all permissions '
+                   'granted to each of their groups.'),
+        verbose_name=('groups')
+    )
+    
+    user_permissions = models.ManyToManyField(
+        'auth.Permission',
+        related_name='customuser_set',
+        blank=True,
+        help_text=('Specific permissions for this user.'),
+        verbose_name=('user permissions')
+    )
+
+    USERNAME_FIELD = 'email'
+
+    objects = NewUserManager()
+
 
 class DishManager(models.Manager):
     def get_one_dish(self, dish_id):
@@ -55,8 +94,8 @@ class Dinner(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     formed_at = models.DateTimeField(blank=True, null=True)
     completed_at = models.DateTimeField(blank=True, null=True)
-    creator = models.ForeignKey(User, related_name='dinners_created', on_delete=models.SET_NULL, null=True)
-    moderator = models.ForeignKey(User, related_name='dinners_moderated', on_delete=models.SET_NULL, null=True, blank=True)
+    creator = models.ForeignKey(CustomUser, related_name='dinners_created', on_delete=models.SET_NULL, null=True)
+    moderator = models.ForeignKey(CustomUser, related_name='dinners_moderated', on_delete=models.SET_NULL, null=True, blank=True)
     total_cost = models.IntegerField(default=0)
 
     class Meta:
