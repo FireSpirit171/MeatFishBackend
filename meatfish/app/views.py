@@ -2,16 +2,18 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.views import APIView
+from rest_framework.decorators import api_view
 from django.http import Http404
 from .models import Dish, Dinner, DinnerDish
-from .serializers import DishSerializer, DinnerSerializer, DinnerDishSerializer, UserSerializer
+from .serializers import *
 from django.conf import settings
 from minio import Minio
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from rest_framework.response import *
 from django.utils import timezone
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
+from drf_yasg.utils import swagger_auto_schema
 
 class UserSingleton:
     _instance = None
@@ -84,7 +86,8 @@ class DishList(APIView):
             'draft_dinner_id': draft_dinner_id 
         }
         return Response(response_data)
-  
+
+    @swagger_auto_schema(request_body=serializer_class)
     def post(self, request, format=None):
         data = request.data.copy()
         data['photo'] = None
@@ -104,16 +107,42 @@ class DishDetail(APIView):
         dish = get_object_or_404(self.model_class, pk=pk)
         serializer = self.serializer_class(dish)
         return Response(serializer.data)
-    
-    def post(self, request, pk, format=None):
-        if request.path.endswith('/image/'):
-            return self.update_image(request, pk)
-        elif request.path.endswith('/draft/'):
-            return self.add_to_draft(request, pk)
-        raise Http404
 
-    def update_image(self, request, pk):
+    @swagger_auto_schema(request_body=serializer_class)
+    def put(self, request, pk, format=None):
         dish = get_object_or_404(self.model_class, pk=pk)
+        serializer = self.serializer_class(dish, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk, format=None):
+        dish = get_object_or_404(self.model_class, pk=pk)
+        if dish.photo:
+            client = Minio(
+                endpoint=settings.AWS_S3_ENDPOINT_URL,
+                access_key=settings.AWS_ACCESS_KEY_ID,
+                secret_key=settings.AWS_SECRET_ACCESS_KEY,
+                secure=settings.MINIO_USE_SSL
+            )
+            image_name = dish.photo.split('/')[-1]
+            try:
+                client.remove_object('meatfish', image_name)
+            except Exception as e:
+                return Response({"error": f"Ошибка при удалении изображения: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+        dish.status = 'd'
+        dish.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class DishImageUpdate(APIView):
+    model_class = Dish
+    serializer_class = DishImageSerializer
+
+    @swagger_auto_schema(request_body=serializer_class)
+    def post(self, request, pk, format=None):
+        dish = get_object_or_404(Dish, pk=pk)
         pic = request.FILES.get("photo")
 
         if not pic:
@@ -141,17 +170,19 @@ class DishDetail(APIView):
 
         return Response({"message": "Изображение успешно обновлено.", "photo_url": pic_url}, status=status.HTTP_200_OK)
 
-    def add_to_draft(self, request, pk):
+class DishAddToDraft(APIView):
+    @swagger_auto_schema()
+    def post(self, request, pk, format=None):
         user = UserSingleton.get_instance()
         if not user:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 
-        dish = get_object_or_404(self.model_class, pk=pk)
+        dish = get_object_or_404(Dish, pk=pk)
         draft_dinner = Dinner.objects.filter(creator=user, status='dr').first()
 
         if not draft_dinner:
             draft_dinner = Dinner.objects.create(
-                table_number = 1,
+                table_number=1,
                 creator=user,
                 status='dr',
                 created_at=timezone.now()
@@ -164,32 +195,6 @@ class DishDetail(APIView):
         DinnerDish.objects.create(dinner=draft_dinner, dish=dish, count=1)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def put(self, request, pk, format=None):
-        dish = get_object_or_404(self.model_class, pk=pk)
-        serializer = self.serializer_class(dish, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, pk, format=None):
-        dish = get_object_or_404(self.model_class, pk=pk)
-        if dish.photo:
-            client = Minio(
-                endpoint=settings.AWS_S3_ENDPOINT_URL,
-                access_key=settings.AWS_ACCESS_KEY_ID,
-                secret_key=settings.AWS_SECRET_ACCESS_KEY,
-                secure=settings.MINIO_USE_SSL
-            )
-            image_name = dish.photo.split('/')[-1]
-            try:
-                client.remove_object('meatfish', image_name)
-            except Exception as e:
-                return Response({"error": f"Ошибка при удалении изображения: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            
-        dish.status = 'd'
-        dish.save()
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 # View для Dinner (заявки)
@@ -223,6 +228,7 @@ class DinnerList(APIView):
 
         return Response(serialized_dinners)
 
+    @swagger_auto_schema(request_body=serializer_class)
     def put(self, request, format=None):
         user = UserSingleton.get_instance()
         required_fields = ['table_number']
@@ -259,6 +265,7 @@ class DinnerDetail(APIView):
 
         return Response(data)
 
+    @swagger_auto_schema(request_body=serializer_class)
     def put(self, request, pk, format=None):
         dinner = get_object_or_404(self.model_class, pk=pk)
         user = UserSingleton.get_instance()
@@ -327,6 +334,7 @@ class DinnerDishDetail(APIView):
     model_class = DinnerDish
     serializer_class = DinnerDishSerializer
 
+    @swagger_auto_schema(request_body=serializer_class)
     def put(self, request, dinner_id, dish_id, format=None):
         dinner = get_object_or_404(Dinner, pk=dinner_id)
         dinner_dish = get_object_or_404(self.model_class, dinner=dinner, dish__id=dish_id)

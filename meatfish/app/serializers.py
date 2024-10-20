@@ -7,6 +7,11 @@ class DishSerializer(serializers.ModelSerializer):
         model = Dish
         fields = ['id', 'name', 'type', 'description', 'price', 'weight', 'photo']
 
+class DishImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Dish
+        fields = ['photo']
+
 class DinnerDishSerializer(serializers.ModelSerializer):
     dish = DishSerializer(read_only=True)
     
