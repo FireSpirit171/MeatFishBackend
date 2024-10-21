@@ -108,8 +108,9 @@ class DishDetail(APIView):
         dish = get_object_or_404(self.model_class, pk=pk)
         serializer = self.serializer_class(dish)
         return Response(serializer.data)
-
+    
     @swagger_auto_schema(request_body=serializer_class)
+    @method_permission_classes([IsManager])
     def put(self, request, pk, format=None):
         dish = get_object_or_404(self.model_class, pk=pk)
         serializer = self.serializer_class(dish, data=request.data, partial=True)
