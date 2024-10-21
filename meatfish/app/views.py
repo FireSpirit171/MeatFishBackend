@@ -73,9 +73,9 @@ class DishList(APIView):
             dishes = dishes.filter(price__lte=max_price)
 
         user = request.user
-        print(user)
         draft_dinner_id = None
-        if user:
+        
+        if user.is_authenticated:
             draft_dinner = Dinner.objects.filter(creator=user, status='dr').first()
             if draft_dinner:
                 draft_dinner_id = draft_dinner.id
