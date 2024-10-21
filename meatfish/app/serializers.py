@@ -19,11 +19,6 @@ class DinnerDishSerializer(serializers.ModelSerializer):
         model = DinnerDish
         fields = ['id', 'dinner', 'dish', 'guest', 'count']
 
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['id', 'username', 'email']
-
 class DishCompactSerializer(serializers.ModelSerializer):
     class Meta:
         model = Dish
