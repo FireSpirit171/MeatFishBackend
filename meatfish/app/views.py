@@ -74,7 +74,7 @@ class DishList(APIView):
 
         user = request.user
         draft_dinner_id = None
-        
+
         if user.is_authenticated:
             draft_dinner = Dinner.objects.filter(creator=user, status='dr').first()
             if draft_dinner:
@@ -88,6 +88,7 @@ class DishList(APIView):
         return Response(response_data)
 
     @swagger_auto_schema(request_body=serializer_class)
+    @method_permission_classes([IsManager])
     def post(self, request, format=None):
         data = request.data.copy()
         data['photo'] = None
