@@ -75,6 +75,7 @@ class DishList(APIView):
             dishes = dishes.filter(price__lte=max_price)
 
         user = request.user
+        draft_dinner_id = None
 
         if user.is_authenticated:
             draft_dinner = Dinner.objects.filter(creator=user, status='dr').first()
@@ -145,6 +146,7 @@ class DishImageUpdate(APIView):
     serializer_class = DishImageSerializer
 
     @swagger_auto_schema(request_body=serializer_class)
+    @method_permission_classes([IsManager])
     def post(self, request, pk, format=None):
         dish = get_object_or_404(Dish, pk=pk)
         pic = request.FILES.get("photo")
@@ -207,17 +209,20 @@ class DinnerList(APIView):
     
     def get(self, request, format=None):
         user = request.user
-
+        
         # Получаем фильтры из запросов
         date_from = request.query_params.get('date_from')
         date_to = request.query_params.get('date_to')
         status = request.query_params.get('status')
 
         # Фильтруем ужины по пользователю и статусам
-        if user.is_staff:
-            dinners = self.model_class.objects.all()
+        if user.is_authenticated:
+            if user.is_staff:
+                dinners = self.model_class.objects.all().exclude(status__in=['del'])
+            else:
+                dinners = self.model_class.objects.filter(creator=user).exclude(status__in=['dr', 'del'])
         else:
-            dinners = self.model_class.objects.filter(creator=user).exclude(status__in=['dr', 'del'])
+            return Response({"error": "Вы не авторизованы"}, status=401)
 
         if date_from:
             dinners = dinners.filter(created_at__gte=date_from)
@@ -234,30 +239,6 @@ class DinnerList(APIView):
 
         return Response(serialized_dinners)
 
-    @swagger_auto_schema(request_body=serializer_class)
-    @method_permission_classes([IsManager])  # Разрешаем только модераторам и администраторам
-    def put(self, request, format=None):
-        user = request.user
-        required_fields = ['table_number']
-        for field in required_fields:
-            if field not in request.data or request.data[field] is None:
-                return Response({field: 'Это поле обязательно для заполнения.'}, status=status.HTTP_400_BAD_REQUEST)
-            
-        dinner_id = request.data.get('id')
-        if dinner_id:
-            dinner = get_object_or_404(self.model_class, pk=dinner_id)
-            serializer = self.serializer_class(dinner, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save(moderator=user)
-                return Response(serializer.data)
-            
-        serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            dinner = serializer.save(creator=user) 
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 class DinnerDetail(APIView):
     model_class = Dinner
     serializer_class = DinnerSerializer
@@ -266,6 +247,8 @@ class DinnerDetail(APIView):
     # Получение заявки
     def get(self, request, pk, format=None):
         dinner = get_object_or_404(self.model_class, pk=pk)
+        if dinner.status == 'del' or dinner.creator != request.user:
+            return Response({"error": "Нельзя посмотреть заявку"}, status=403)
         serializer = self.serializer_class(dinner)
         data = serializer.data
         data['creator'] = dinner.creator.email
@@ -345,16 +328,21 @@ class DinnerDetail(APIView):
         return Response({"error": "Модератор может только завершить или отклонить заявку."}, status=status.HTTP_400_BAD_REQUEST)
 
     def put_edit(self, request, pk):
-        dinner = get_object_or_404(self.model_class, pk=pk)
+        user = request.user
+        if user.is_authenticated:
+            dinner = get_object_or_404(self.model_class, pk=pk)
 
-        # Обновление дополнительных полей
-        serializer = self.serializer_class(dinner, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
+            if dinner.creator == user:
+                # Обновление дополнительных полей
+                serializer = self.serializer_class(dinner, data=request.data, partial=True)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(serializer.data)
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Вы не создатель заказа"}, status=403)
+        return Response({"error": "Вы не авторизованы"}, status=401)
+    
     # Вычисление общей стоимости заявки
     def calculate_total_cost(self, dinner):
         total_cost = 0
@@ -370,7 +358,12 @@ class DinnerDetail(APIView):
     # Мягкое удаление заявки
     def delete(self, request, pk, format=None):
         dinner = get_object_or_404(self.model_class, pk=pk)
+        if dinner.creator != request.user:
+            return Response({"error": "Вы не создатель заказа"}, status=403)
+        if dinner.status != 'dr':
+            return Response({"error": "Нельзя удалить заявку"}, status=403)
         dinner.status = 'del'  # Мягкое удаление
+        dinner.formed_at = timezone.now()
         dinner.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -462,6 +455,14 @@ def login_view(request):
     else:
         return HttpResponse("{'status': 'error', 'error': 'login failed'}")
 
+@swagger_auto_schema(method='post')
 def logout_view(request):
-    logout(request)
-    return Response({'status': 'Success'})
+    session_id = request.COOKIES.get("session_id")
+    if session_id:
+        session_storage.delete(session_id)
+        response = HttpResponse("{'status': 'ok'}")
+        response.delete_cookie("session_id")
+        return response
+    else:
+        return HttpResponse("{'status': 'error', 'error': 'no session found'}")
+
