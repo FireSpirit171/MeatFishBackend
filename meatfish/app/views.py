@@ -318,6 +318,9 @@ class DinnerDetail(APIView):
                     total_cost = self.calculate_total_cost(dinner)
                     updated_data = request.data.copy()
                     updated_data['total_cost'] = total_cost
+                elif status_value == 'r':
+                    dinner.completed_at = timezone.now()
+                    updated_data = request.data.copy()
 
                 serializer = self.serializer_class(dinner, data=updated_data, partial=True)
                 if serializer.is_valid():
