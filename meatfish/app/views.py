@@ -376,6 +376,7 @@ class DinnerDishDetail(APIView):
     serializer_class = DinnerDishSerializer
 
     @swagger_auto_schema(request_body=serializer_class)
+    @method_permission_classes([IsManager])
     def put(self, request, dinner_id, dish_id, format=None):
         dinner = get_object_or_404(Dinner, pk=dinner_id)
         dinner_dish = get_object_or_404(self.model_class, dinner=dinner, dish__id=dish_id)
@@ -388,10 +389,14 @@ class DinnerDishDetail(APIView):
 
     def delete(self, request, dinner_id, dish_id, format=None):
         dinner = get_object_or_404(Dinner, pk=dinner_id)
-        dinner_dish = get_object_or_404(self.model_class, dinner=dinner, dish__id=dish_id)
-        
-        dinner_dish.delete()
-        return Response({"message": "Блюдо успешно удалено из заявки"}, status=status.HTTP_204_NO_CONTENT)
+        user = request.user
+        if user.is_authenticated:
+            if dinner.creator == user:
+                dinner_dish = get_object_or_404(self.model_class, dinner=dinner, dish__id=dish_id)
+                dinner_dish.delete()
+                return Response({"message": "Блюдо успешно удалено из заявки"}, status=status.HTTP_204_NO_CONTENT)
+            return Response({"error": "Вы не создатель заказа"}, status=403)
+        return Response({"error": "Вы не авторизованы"}, status=401)
 
 class UserViewSet(ModelViewSet):
     queryset = CustomUser.objects.all()
@@ -422,8 +427,7 @@ class UserViewSet(ModelViewSet):
     @action(detail=False, methods=['put'], permission_classes=[AllowAny])
     def profile(self, request, format=None):
         user = request.user
-        print(user)
-        if user is None:
+        if not user.is_authenticated:
             return Response({'error': 'Вы не авторизованы'}, status=status.HTTP_401_UNAUTHORIZED)
 
         serializer = self.serializer_class(user, data=request.data, partial=True)
@@ -460,12 +464,14 @@ def login_view(request):
 
 @swagger_auto_schema(method='post')
 def logout_view(request):
-    session_id = request.COOKIES.get("session_id")
-    if session_id:
-        session_storage.delete(session_id)
-        response = HttpResponse("{'status': 'ok'}")
-        response.delete_cookie("session_id")
-        return response
-    else:
-        return HttpResponse("{'status': 'error', 'error': 'no session found'}")
+    if request.user.is_authenticated:
+        session_id = request.COOKIES.get("session_id")
+        if session_id:
+            session_storage.delete(session_id)
+            response = HttpResponse("{'status': 'ok'}")
+            response.delete_cookie("session_id")
+            return response
+        else:
+            return HttpResponse("{'status': 'error', 'error': 'no session found'}")
+    return HttpResponse("{'error': 'Вы не авторизованы'}")
 
