@@ -18,6 +18,7 @@ from drf_yasg.utils import swagger_auto_schema
 from django.contrib.auth import authenticate, login, logout
 from django.views.decorators.csrf import csrf_exempt
 from app.permissions import *
+from app.services.qr_generate import generate_dinner_qr
 import redis
 import uuid
 
@@ -31,7 +32,6 @@ def method_permission_classes(classes):
             return func(self, *args, **kwargs)
         return decorated_func
     return decorator
-
 
 def process_file_upload(file_object: InMemoryUploadedFile, client, image_name):
     try:
@@ -76,16 +76,19 @@ class DishList(APIView):
 
         user = request.user
         draft_dinner_id = None
+        total_dish_count = 0
 
         if user.is_authenticated:
             draft_dinner = Dinner.objects.filter(creator=user, status='dr').first()
             if draft_dinner:
                 draft_dinner_id = draft_dinner.id
+                total_dish_count = Dinner.objects.get_total_dish_count(draft_dinner)
 
         serializer = self.serializer_class(dishes, many=True)
         response_data = {
             'dishes': serializer.data,
-            'draft_dinner_id': draft_dinner_id 
+            'draft_dinner_id': draft_dinner_id,
+            'total_dish_count': total_dish_count 
         }
         return Response(response_data)
 
@@ -314,10 +317,17 @@ class DinnerDetail(APIView):
 
                 # Установка даты завершения и расчёт стоимости для завершённых заявок
                 if status_value == 'c':
-                    dinner.completed_at = timezone.now()
+                    real_time = timezone.now()
+                    dinner.completed_at = real_time
                     total_cost = self.calculate_total_cost(dinner)
                     updated_data = request.data.copy()
                     updated_data['total_cost'] = total_cost
+
+                    # Генерация QR-кода
+                    dinner_dishes = dinner.dinnerdish_set.all()
+                    qr_code_base64 = generate_dinner_qr(dinner, dinner_dishes, real_time)
+                    updated_data['qr'] = qr_code_base64
+
                 elif status_value == 'r':
                     dinner.completed_at = timezone.now()
                     updated_data = request.data.copy()

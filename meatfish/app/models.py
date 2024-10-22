@@ -65,15 +65,6 @@ class Dish(models.Model):
         return self.name
 
 class DinnerManager(models.Manager):
-    def generate_qr_code(self, dinner):
-        qr_data = f"Order ID: {dinner.id}, Table Number: {dinner.table_number}"
-        qr = segno.make(qr_data)
-
-        buffer = BytesIO()
-        qr.save(buffer, kind='png', scale=5)
-        buffer.seek(0)
-
-        return buffer
 
     def get_one_dinner(self, dinner_id):
         return self.get(id=dinner_id)
@@ -97,6 +88,7 @@ class Dinner(models.Model):
     creator = models.ForeignKey(CustomUser, related_name='dinners_created', on_delete=models.SET_NULL, null=True)
     moderator = models.ForeignKey(CustomUser, related_name='dinners_moderated', on_delete=models.SET_NULL, null=True, blank=True)
     total_cost = models.IntegerField(default=0)
+    qr = models.TextField(null=True, blank=True)
 
     class Meta:
         constraints = [
