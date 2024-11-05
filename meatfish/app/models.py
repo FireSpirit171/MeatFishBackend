@@ -56,7 +56,7 @@ class Dish(models.Model):
     description = models.TextField()
     price = models.IntegerField()
     weight = models.IntegerField()
-    photo = models.CharField(blank=True, null=True)
+    photo = models.CharField(blank=True, default='http://127.0.0.1:9000/meatfish/default.jpg')
     status = models.CharField(choices=STATUS_CHOICES, max_length=7, default='a')
 
     objects = DishManager()

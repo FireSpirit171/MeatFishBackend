@@ -96,7 +96,9 @@ class DishList(APIView):
     @swagger_auto_schema(request_body=serializer_class)
     def post(self, request, format=None):
         data = request.data.copy()
-        data['photo'] = None
+        
+        if 'photo' not in data or not data['photo']:
+            data['photo'] = 'http://127.0.0.1:9000/meatfish/default.jpg'
 
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
