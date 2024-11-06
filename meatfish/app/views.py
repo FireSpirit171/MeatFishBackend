@@ -236,13 +236,11 @@ class DinnerList(APIView):
         if status:
             dinners = dinners.filter(status=status)
 
-        # Сериализуем данные
-        serialized_dinners = [
-            {**self.serializer_class(dinner).data, 'creator': dinner.creator.email, 'moderator': dinner.moderator.email if dinner.moderator else None}
-            for dinner in dinners
-        ]
+        # Сериализуем данные без поля 'dishes'
+        serialized_dinners = self.serializer_class(dinners, many=True).data
 
         return Response(serialized_dinners)
+
 
 class DinnerDetail(APIView):
     model_class = Dinner
@@ -487,3 +485,4 @@ def logout_view(request):
             return HttpResponse("{'status': 'error', 'error': 'no session found'}")
     return HttpResponse("{'error': 'Вы не авторизованы'}")
 
+# EVAL "local result = {}; for _,key in ipairs(redis.call('KEYS', '*')) do table.insert(result, key .. ' - ' .. redis.call('GET', key)); end; return result" 0
