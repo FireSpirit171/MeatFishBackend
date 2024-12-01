@@ -40,6 +40,7 @@ router = routers.DefaultRouter()
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('csrf/', views.get_csrf_token),
     path('dishes/', views.DishList.as_view(), name='dish-list'),
     path('dishes/<int:pk>/', views.DishDetail.as_view(), name='dish-detail'),
     path('dishes/<int:pk>/image/', views.DishImageUpdate.as_view(), name='dish-update-image'),
@@ -57,4 +58,5 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('users/auth/', views.UserViewSet.as_view({'post': 'create'}), name='user-register'),
     path('users/profile/', views.UserViewSet.as_view({'put': 'profile'}), name='user-profile'),
+    path('users/check/', views.check_session)
 ]

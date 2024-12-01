@@ -21,6 +21,11 @@ from app.permissions import *
 from app.services.qr_generate import generate_dinner_qr
 import redis
 import uuid
+from django.http import JsonResponse
+from django.middleware.csrf import get_token
+
+def get_csrf_token(request):
+    return JsonResponse({'csrfToken': get_token(request)})
 
 session_storage = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT)
 
@@ -465,12 +470,12 @@ def login_view(request):
         random_key = str(uuid.uuid4())
         session_storage.set(random_key, username)
 
-        response = HttpResponse("{'status': 'ok'}")
+        response = JsonResponse({"status": "ok", "username": username})
         response.set_cookie("session_id", random_key)
         
         return response
     else:
-        return HttpResponse("{'status': 'error', 'error': 'login failed'}")
+        return JsonResponse({"status": "error", "error": "login failed"})
 
 @swagger_auto_schema(method='post')
 def logout_view(request):
@@ -484,4 +489,22 @@ def logout_view(request):
         else:
             return HttpResponse("{'status': 'error', 'error': 'no session found'}")
     return HttpResponse("{'error': 'Вы не авторизованы'}")
+
+@swagger_auto_schema(method='get')
+@api_view(["GET"])
+@csrf_exempt
+def check_session(request):
+    session_id = request.COOKIES.get("session_id")
+    
+    if session_id:
+        username = session_storage.get(session_id)
+        print(username)
+        if username:
+            if isinstance(username, bytes):
+                username = username.decode('utf-8')
+            return JsonResponse({"status": "ok", "username": username})
+    
+    return JsonResponse({"status": "error", "message": "Invalid session"})
+
+
 
