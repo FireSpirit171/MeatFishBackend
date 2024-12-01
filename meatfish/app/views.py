@@ -101,7 +101,9 @@ class DishList(APIView):
     @swagger_auto_schema(request_body=serializer_class)
     def post(self, request, format=None):
         data = request.data.copy()
-        data['photo'] = None
+        
+        if 'photo' not in data or not data['photo']:
+            data['photo'] = 'http://127.0.0.1:9000/meatfish/default.jpg'
 
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
@@ -239,13 +241,11 @@ class DinnerList(APIView):
         if status:
             dinners = dinners.filter(status=status)
 
-        # Сериализуем данные
-        serialized_dinners = [
-            {**self.serializer_class(dinner).data, 'creator': dinner.creator.email, 'moderator': dinner.moderator.email if dinner.moderator else None}
-            for dinner in dinners
-        ]
+        # Сериализуем данные без поля 'dishes'
+        serialized_dinners = self.serializer_class(dinners, many=True).data
 
         return Response(serialized_dinners)
+
 
 class DinnerDetail(APIView):
     model_class = Dinner
@@ -506,5 +506,4 @@ def check_session(request):
     
     return JsonResponse({"status": "error", "message": "Invalid session"})
 
-
-
+# EVAL "local result = {}; for _,key in ipairs(redis.call('KEYS', '*')) do table.insert(result, key .. ' - ' .. redis.call('GET', key)); end; return result" 0
