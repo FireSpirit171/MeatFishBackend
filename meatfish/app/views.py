@@ -451,11 +451,31 @@ class UserViewSet(ModelViewSet):
         if not user.is_authenticated:
             return Response({'error': 'Вы не авторизованы'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        serializer = self.serializer_class(user, data=request.data, partial=True)
+        old_email = user.email
+        data = request.data
+
+        if 'password' in data and data['password']:
+            user.set_password(data['password'])
+            user.save()
+            del data['password']
+
+        serializer = self.serializer_class(user, data=data, partial=True)
+
         if serializer.is_valid():
             serializer.save()
+
+            new_email = serializer.data.get('email')
+            if new_email and old_email != new_email:
+                ssid = request.COOKIES.get("session_id")
+                if ssid:
+                    # Удаляем старую запись
+                    session_storage.delete(ssid)
+                    # Создаем новую запись
+                    session_storage.set(ssid, new_email, ex=settings.SESSION_COOKIE_AGE)
+
             return Response({'message': 'Профиль обновлен', 'user': serializer.data}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 @authentication_classes([])
