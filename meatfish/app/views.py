@@ -23,6 +23,7 @@ import redis
 import uuid
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
+from rest_framework.response import Response
 
 def get_csrf_token(request):
     return JsonResponse({'csrfToken': get_token(request)})
@@ -196,6 +197,7 @@ class DishAddToDraft(APIView):
         dish = get_object_or_404(Dish, pk=pk)
         draft_dinner = Dinner.objects.filter(creator=user, status='dr').first()
 
+        # Если черновика нет, создаем новый
         if not draft_dinner:
             draft_dinner = Dinner.objects.create(
                 table_number=1,
@@ -205,11 +207,19 @@ class DishAddToDraft(APIView):
             )
             draft_dinner.save()
 
+        # Если блюдо уже есть в черновике, возвращаем ошибку
         if DinnerDish.objects.filter(dinner=draft_dinner, dish=dish).exists():
             return Response(data={"error": "Блюдо уже добавлено в черновик."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Добавляем блюдо в черновик
         DinnerDish.objects.create(dinner=draft_dinner, dish=dish, count=1)
-        return Response(status=status.HTTP_204_NO_CONTENT)
+
+        # Возвращаем ID черновика и информацию о блюдах
+        total_dish_count = Dinner.objects.get_total_dish_count(draft_dinner)
+        return Response({
+            "draft_dinner_id": draft_dinner.id,
+            "total_dish_count": total_dish_count
+        }, status=status.HTTP_201_CREATED)
 
 
 # View для Dinner (заявки)
@@ -284,12 +294,6 @@ class DinnerDetail(APIView):
         user = request.user
 
         if user == dinner.creator:
-
-            # Проверка на обязательные поля
-            required_fields = ['table_number']
-            for field in required_fields:
-                if field not in request.data:
-                    return Response({"error": f"Поле {field} является обязательным."}, status=status.HTTP_400_BAD_REQUEST)
 
             # Установка статуса 'f' (сформирована) и даты формирования
             if 'status' in request.data and request.data['status'] == 'f':
@@ -391,7 +395,7 @@ class DinnerDishDetail(APIView):
     serializer_class = DinnerDishSerializer
 
     @swagger_auto_schema(request_body=serializer_class)
-    @method_permission_classes([IsManager])
+    # @method_permission_classes([IsManager])
     def put(self, request, dinner_id, dish_id, format=None):
         dinner = get_object_or_404(Dinner, pk=dinner_id)
         dinner_dish = get_object_or_404(self.model_class, dinner=dinner, dish__id=dish_id)
@@ -409,7 +413,9 @@ class DinnerDishDetail(APIView):
             if dinner.creator == user:
                 dinner_dish = get_object_or_404(self.model_class, dinner=dinner, dish__id=dish_id)
                 dinner_dish.delete()
-                return Response({"message": "Блюдо успешно удалено из заявки"}, status=status.HTTP_204_NO_CONTENT)
+                response = Response({"message": "Блюдо успешно удалено из заявки"}, status=status.HTTP_204_NO_CONTENT)
+                response['Content-Length'] = '0'
+                return response
             return Response({"error": "Вы не создатель заказа"}, status=403)
         return Response({"error": "Вы не авторизованы"}, status=401)
 
@@ -498,7 +504,6 @@ def check_session(request):
     
     if session_id:
         username = session_storage.get(session_id)
-        print(username)
         if username:
             if isinstance(username, bytes):
                 username = username.decode('utf-8')

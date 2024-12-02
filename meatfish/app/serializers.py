@@ -32,9 +32,11 @@ class DinnerDishCompactSerializer(serializers.ModelSerializer):
         fields = ['dish', 'guest', 'count']
 
 class DinnerSerializer(serializers.ModelSerializer):
+    dishes = DinnerDishCompactSerializer(many=True, read_only=True, source='dinnerdish_set')
+    
     class Meta:
         model = Dinner
-        fields = ['id', 'table_number', 'total_cost', 'status', 'created_at', 'formed_at', 'completed_at', 'creator', 'moderator', 'qr']
+        fields = ['id', 'table_number', 'total_cost', 'status', 'created_at', 'formed_at', 'completed_at', 'creator', 'moderator', 'qr', 'dishes']
 
 
 
