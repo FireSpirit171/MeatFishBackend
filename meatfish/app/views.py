@@ -245,9 +245,9 @@ class DinnerList(APIView):
             return Response({"error": "Вы не авторизованы"}, status=401)
 
         if date_from:
-            dinners = dinners.filter(created_at__gte=date_from)
+            dinners = dinners.filter(formed_at__gte=date_from)
         if date_to:
-            dinners = dinners.filter(created_at__lte=date_to)
+            dinners = dinners.filter(formed_at__lte=date_to)
         if status:
             dinners = dinners.filter(status=status)
 
